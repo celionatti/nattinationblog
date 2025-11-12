@@ -294,7 +294,7 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
 });
 
 // ========== CARD CLICK HANDLING ==========
-document.querySelectorAll(".hero-card, .content-card").forEach((card) => {
+document.querySelectorAll(".hero-card, .content-card, .article-card").forEach((card) => {
   card.addEventListener("click", function () {
     // In a real implementation, this would navigate to the article
     console.log("Navigate to article page");
@@ -321,3 +321,31 @@ if ("loading" in HTMLImageElement.prototype) {
 
   images.forEach((img) => imageObserver.observe(img));
 }
+
+// ========== SCROLL PROGRESS BAR ==========
+const scrollProgress = document.getElementById("scrollProgress");
+
+window.addEventListener("scroll", () => {
+  const windowHeight =
+    document.documentElement.scrollHeight - window.innerHeight;
+  const scrolled = (window.scrollY / windowHeight) * 100;
+  scrollProgress.style.width = scrolled + "%";
+});
+
+// ========== SCROLL TO TOP BUTTON ==========
+const scrollToTopBtn = document.getElementById("scrollToTop");
+
+window.addEventListener("scroll", () => {
+  if (window.scrollY > 300) {
+    scrollToTopBtn.classList.add("visible");
+  } else {
+    scrollToTopBtn.classList.remove("visible");
+  }
+});
+
+scrollToTopBtn.addEventListener("click", () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+});

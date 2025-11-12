@@ -19,7 +19,16 @@
 </head>
 
 <body class="loading">
-    @yield('content')
+    <Loader />
+    <div class="main-content">
+        <Header />
+
+        @yield('content')
+
+        <Footer />
+
+        <Cookie />
+    </div>
 
     <script src="{{ asset('assets/js/main.js') }}"></script>
     @stack('scripts')
