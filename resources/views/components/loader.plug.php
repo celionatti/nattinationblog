@@ -5,8 +5,15 @@
             <span class="light-theme">Natti<span>Nation</span></span>
             <span class="dark-theme">Natti<span>Nation</span></span>
         </div>
-        <div class="spinner"></div>
-        <p class="loader-text">Loading amazing content...</p>
+        <div class="modern-loader">
+            <div class="loader-shape"></div>
+            <div class="loader-inner"></div>
+            <div class="loader-dot"></div>
+        </div>
+        <div class="loader-progress">
+            <div class="loader-progress-bar" id="loaderProgressBar"></div>
+        </div>
+        <p class="loader-text" id="loaderText">Loading amazing content...</p>
     </div>
 </div>
 

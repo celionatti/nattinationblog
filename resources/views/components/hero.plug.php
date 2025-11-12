@@ -4,7 +4,7 @@
         <div class="row g-4">
             <!-- Main Featured Post -->
             <div class="col-lg-8">
-                <div class="hero-card">
+                <div class="hero-card" data-article-id="61" data-article-slug="title-61">
                     <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=400&fit=crop"
                         alt="Featured article" loading="lazy">
                     <div class="card-body">
@@ -24,7 +24,7 @@
             <div class="col-lg-4">
                 <div class="row g-4">
                     <div class="col-12">
-                        <div class="hero-card small">
+                        <div class="hero-card small" data-article-id="62" data-article-slug="title-62">
                             <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=400&h=200&fit=crop"
                                 alt="Tech news" loading="lazy">
                             <div class="card-body">
@@ -37,7 +37,7 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <div class="hero-card small">
+                        <div class="hero-card small" data-article-id="63" data-article-slug="title-63">
                             <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=200&fit=crop"
                                 alt="Sports news" loading="lazy">
                             <div class="card-body">

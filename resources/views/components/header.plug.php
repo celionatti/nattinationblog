@@ -7,8 +7,8 @@
             </button>
             <a href="/" class="brand">Natti<span>Nation</span></a>
             <div class="auth-links">
-                <a href="#"><i class="bi bi-person-circle me-1"></i> Login</a>
-                <a href="#"><i class="bi bi-person-plus-fill me-1"></i> Sign Up</a>
+                <a href="{{ url('login') }}"><i class="bi bi-person-circle me-1"></i> Login</a>
+                <a href="{{ url('signup') }}"><i class="bi bi-person-plus-fill me-1"></i> Sign Up</a>
             </div>
         </div>
     </div>
@@ -23,8 +23,8 @@
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Articles</a></li>
+                <li class="nav-item"><a class="nav-link active" href="{{ url('/') }}">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url('articles') }}">Articles</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">World</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Sports</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Politics</a></li>

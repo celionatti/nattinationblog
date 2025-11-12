@@ -24,3 +24,5 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Article Routes
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
+
+Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');

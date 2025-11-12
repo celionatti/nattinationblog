@@ -173,7 +173,7 @@
         <div class="row" id="articlesContainer">
             <!-- Article cards will be dynamically loaded here -->
             <div class="col-lg-4 col-md-6" data-category="technology">
-                <div class="article-card">
+                <div class="article-card" data-article-id="1" data-article-slug="title-1">
                     <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=200&fit=crop"
                         alt="Tech" loading="lazy">
                     <div class="card-body">
@@ -188,7 +188,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6" data-category="politics">
-                <div class="article-card">
+                <div class="article-card" data-article-id="2" data-article-slug="title-2">
                     <img src="https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=400&h=200&fit=crop"
                         alt="Politics" loading="lazy">
                     <div class="card-body">
@@ -203,7 +203,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6" data-category="entertainment">
-                <div class="article-card">
+                <div class="article-card" data-article-id="3" data-article-slug="title-3">
                     <img src="https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=200&fit=crop"
                         alt="Movie" loading="lazy">
                     <div class="card-body">
@@ -218,7 +218,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6" data-category="sports">
-                <div class="article-card">
+                <div class="article-card" data-article-id="4" data-article-slug="title-4">
                     <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=200&fit=crop"
                         alt="Sports" loading="lazy">
                     <div class="card-body">
@@ -233,7 +233,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6" data-category="lifestyle">
-                <div class="article-card">
+                <div class="article-card" data-article-id="5" data-article-slug="title-5">
                     <img src="https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=400&h=200&fit=crop"
                         alt="Travel" loading="lazy">
                     <div class="card-body">
@@ -248,7 +248,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6" data-category="technology">
-                <div class="article-card">
+                <div class="article-card" data-article-id="6" data-article-slug="title-6">
                     <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=400&h=200&fit=crop"
                         alt="AI" loading="lazy">
                     <div class="card-body">

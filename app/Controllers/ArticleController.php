@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use Plugs\Base\Controller\Controller;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * ArticleController
@@ -22,5 +23,18 @@ class ArticleController extends Controller
     {
         $data = [];
         return $this->view('pages.articles', $data);
+    }
+
+    /**
+     * Display Single Article Page
+     */
+    public function article(ServerRequestInterface $request): ResponseInterface
+    {
+        $id = $request->getAttribute('id');
+
+        $data = [
+            'articleId' => $id,
+        ];
+        return $this->view('pages.article', $data);
     }
 }

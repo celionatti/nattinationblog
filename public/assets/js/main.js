@@ -8,8 +8,31 @@ window.addEventListener("load", function () {
   const pageLoader = document.getElementById("pageLoader");
   const mainContent = document.querySelector(".main-content");
   const body = document.body;
+  const loaderProgressBar = document.getElementById("loaderProgressBar");
+  const loaderText = document.getElementById("loaderText");
 
-  // Minimum loading time to ensure smooth animation (optional)
+  // Animate the progress bar
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += Math.random() * 15;
+    if (progress > 100) progress = 100;
+    loaderProgressBar.style.width = `${progress}%`;
+
+    if (progress >= 100) {
+      clearInterval(progressInterval);
+    }
+  }, 200);
+
+  // Animate the loading text
+  const text = loaderText.textContent;
+  loaderText.innerHTML = "";
+  for (let i = 0; i < text.length; i++) {
+    const span = document.createElement("span");
+    span.textContent = text[i];
+    loaderText.appendChild(span);
+  }
+
+  // Minimum loading time to ensure smooth animation
   setTimeout(() => {
     pageLoader.classList.add("hidden");
     mainContent.classList.add("visible");
@@ -19,7 +42,7 @@ window.addEventListener("load", function () {
     setTimeout(() => {
       pageLoader.style.display = "none";
     }, 500);
-  }, 800); // Adjust this delay as needed (800ms = 0.8 seconds)
+  }, 1200); // Slightly longer to show the new animation
 });
 
 // ========== SEARCH TOGGLE FUNCTIONALITY ==========
@@ -294,13 +317,24 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
 });
 
 // ========== CARD CLICK HANDLING ==========
-document.querySelectorAll(".hero-card, .content-card, .article-card").forEach((card) => {
-  card.addEventListener("click", function () {
-    // In a real implementation, this would navigate to the article
-    console.log("Navigate to article page");
-    // window.location.href = 'post.html?id=123';
+document
+  .querySelectorAll(".hero-card, .content-card, .article-card")
+  .forEach((card) => {
+    card.addEventListener("click", function () {
+      // Get the article ID from data attribute
+      const articleId = this.getAttribute("data-article-id");
+      const articleSlug = this.getAttribute("data-article-slug") || "";
+
+      // Navigate to the single article page with the ID
+      // window.location.href = `article.html?id=${articleId}`;
+
+      window.location.href = `/articles/${articleSlug}/${articleId}`;
+
+      // Alternative: If using a different URL structure
+      // window.location.href = `/article/${articleId}`;
+      // window.location.href = `single-article.html?id=${articleId}`;
+    });
   });
-});
 
 // ========== LAZY LOADING FALLBACK ==========
 if ("loading" in HTMLImageElement.prototype) {
