@@ -1,6 +1,34 @@
 @extends('layouts.default')
 
-@section('title', 'Articles Page ')
+@section('title', 'Article Page ')
+
+@push('styles')
+<!-- Structured Data / JSON-LD -->
+<script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": "Breaking: Major Development Reshapes Global Economy",
+        "image": "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200",
+        "datePublished": "2025-11-05T08:00:00+00:00",
+        "dateModified": "2025-11-05T09:30:00+00:00",
+        "author": {
+            "@type": "Person",
+            "name": "John Doe",
+            "url": "https://example.com/author/john-doe"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "BlogName",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://example.com/logo.png"
+            }
+        },
+        "description": "In-depth analysis of the latest global economic developments and their implications for markets worldwide."
+    }
+</script>
+@endpush
 
 @section('content')
 <!-- ========== BREADCRUMB ========== -->

@@ -17,24 +17,33 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
     @stack('styles')
 </head>
 
-<body class="loading">
-    <Loader />
-    <div class="main-content">
-        <Header />
-
-        @yield('content')
-
-        <Footer />
-
-        <Cookie />
+<body class="dark-mode">
+    <!-- ========== 3D BACKGROUND ========== -->
+    <div class="bg-3d-container">
+        <div class="shape-1 bg-shape"></div>
+        <div class="shape-2 bg-shape"></div>
+        <div class="shape-3 bg-shape"></div>
+        <div class="shape-4 bg-shape"></div>
     </div>
 
+    <!-- ========== FLOATING PARTICLES ========== -->
+    <div class="particles" id="particles"></div>
+
+    <!-- ========== THEME TOGGLE ========== -->
+    <div class="theme-toggle-container">
+        <button class="theme-toggle" id="themeToggle">
+            <i class="bi bi-sun-fill" id="themeIcon"></i>
+        </button>
+    </div>
+
+    @yield('content')
+
     <script src="{{ asset('assets/packages/bootstrap/js/bootstrap.min.js') }}"></script>
-    <script src="{{ asset('assets/js/main.js') }}"></script>
+    <script src="{{ asset('assets/js/auth.js') }}"></script>
     @stack('scripts')
 </body>
 
