@@ -5,42 +5,57 @@ document.addEventListener("DOMContentLoaded", function () {
   const themeIcon = document.getElementById("themeIcon");
   const body = document.body;
 
-  // Initialize theme from localStorage
-  function initTheme() {
-    const savedTheme = localStorage.getItem("site_theme");
-    if (savedTheme === "light") {
-      body.classList.remove("dark-mode");
-      updateThemeIcon(false);
-    } else {
-      body.classList.add("dark-mode");
-      updateThemeIcon(true);
-    }
-  }
+  // Check for saved theme preference
+  const savedTheme = localStorage.getItem("site_theme") || "dark";
 
-  function updateThemeIcon(isDark) {
-    if (isDark) {
+  function setTheme(theme) {
+    if (theme === "light") {
+      body.classList.remove("dark-mode");
       themeIcon.classList.remove("bi-sun-fill");
       themeIcon.classList.add("bi-moon-stars-fill");
     } else {
+      body.classList.add("dark-mode");
       themeIcon.classList.remove("bi-moon-stars-fill");
       themeIcon.classList.add("bi-sun-fill");
     }
+    localStorage.setItem("site_theme", theme);
   }
+
+  // Initialize theme
+  setTheme(savedTheme);
 
   // Toggle theme on button click
   themeToggle.addEventListener("click", () => {
-    body.classList.toggle("dark-mode");
     const isDark = body.classList.contains("dark-mode");
-    updateThemeIcon(isDark);
-    localStorage.setItem("site_theme", isDark ? "dark" : "light");
+    setTheme(isDark ? "light" : "dark");
   });
 
-  // Initialize on page load
-  initTheme();
+  // ========== PASSWORD TOGGLE ==========
+  const passwordToggle = document.getElementById("passwordToggle");
+  const confirmPasswordToggle = document.getElementById(
+    "confirmPasswordToggle"
+  );
+  const passwordInput = document.getElementById("password");
+  const confirmPasswordInput = document.getElementById("confirmPassword");
+
+  function togglePasswordVisibility(input, toggle) {
+    const isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    const icon = toggle.querySelector("i");
+    icon.className = isPassword ? "bi bi-eye-slash" : "bi bi-eye";
+  }
+
+  passwordToggle.addEventListener("click", () => {
+    togglePasswordVisibility(passwordInput, passwordToggle);
+  });
+
+  confirmPasswordToggle.addEventListener("click", () => {
+    togglePasswordVisibility(confirmPasswordInput, confirmPasswordToggle);
+  });
 
   // ========== VALIDATION FUNCTIONS ==========
   function validateName(name) {
-    return name.length >= 2 && /^[a-zA-Z\s]+$/.test(name);
+    return name.trim().length >= 2 && /^[a-zA-Z\s]+$/.test(name);
   }
 
   function validateEmail(email) {
@@ -61,7 +76,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ========== PASSWORD STRENGTH ==========
-  const passwordInput = document.getElementById("password");
   const passwordStrength = document.getElementById("passwordStrength");
   const passwordText = document.getElementById("passwordText");
 
@@ -115,11 +129,11 @@ document.addEventListener("DOMContentLoaded", function () {
       error: document.getElementById("usernameError"),
     },
     password: {
-      element: document.getElementById("password"),
+      element: passwordInput,
       error: document.getElementById("passwordError"),
     },
     confirmPassword: {
-      element: document.getElementById("confirmPassword"),
+      element: confirmPasswordInput,
       error: document.getElementById("confirmPasswordError"),
     },
     terms: {
@@ -131,75 +145,64 @@ document.addEventListener("DOMContentLoaded", function () {
   // Add event listeners for real-time validation
   inputs.firstName.element.addEventListener("blur", function () {
     const isValid = validateName(this.value);
-    updateFieldValidation(
-      this,
-      inputs.firstName.error,
-      isValid,
-      "First name must be at least 2 characters"
-    );
+    updateFieldValidation(this, inputs.firstName.error, isValid);
   });
 
   inputs.lastName.element.addEventListener("blur", function () {
     const isValid = validateName(this.value);
-    updateFieldValidation(
-      this,
-      inputs.lastName.error,
-      isValid,
-      "Last name must be at least 2 characters"
-    );
+    updateFieldValidation(this, inputs.lastName.error, isValid);
   });
 
   inputs.email.element.addEventListener("blur", function () {
     const isValid = validateEmail(this.value);
-    updateFieldValidation(
-      this,
-      inputs.email.error,
-      isValid,
-      "Please enter a valid email address"
-    );
+    updateFieldValidation(this, inputs.email.error, isValid);
   });
 
   inputs.username.element.addEventListener("blur", function () {
     const isValid = validateUsername(this.value);
-    updateFieldValidation(
-      this,
-      inputs.username.error,
-      isValid,
-      "Username must be 3-20 characters (letters, numbers, _)"
-    );
+    updateFieldValidation(this, inputs.username.error, isValid);
   });
 
   inputs.password.element.addEventListener("blur", function () {
     const isValid = validatePassword(this.value);
-    updateFieldValidation(
-      this,
-      inputs.password.error,
-      isValid,
-      "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
-    );
+    updateFieldValidation(this, inputs.password.error, isValid);
   });
 
   inputs.confirmPassword.element.addEventListener("blur", function () {
-    const isValid = this.value === inputs.password.element.value;
-    updateFieldValidation(
-      this,
-      inputs.confirmPassword.error,
-      isValid,
-      "Passwords do not match"
-    );
+    const isValid =
+      this.value === inputs.password.element.value && this.value.length > 0;
+    updateFieldValidation(this, inputs.confirmPassword.error, isValid);
   });
 
   inputs.terms.element.addEventListener("change", function () {
     const isValid = this.checked;
-    updateFieldValidation(
-      this,
-      inputs.terms.error,
-      isValid,
-      "You must accept the terms and conditions"
-    );
+    updateFieldValidation(this, inputs.terms.error, isValid);
   });
 
-  function updateFieldValidation(field, errorElement, isValid, errorMessage) {
+  // Clear error on input
+  Object.values(inputs).forEach((input) => {
+    if (input.element.type !== "checkbox") {
+      input.element.addEventListener("input", function () {
+        if (this.classList.contains("error")) {
+          this.classList.remove("error");
+          input.error.style.display = "none";
+        }
+      });
+    }
+  });
+
+  function updateFieldValidation(field, errorElement, isValid) {
+    if (field.type === "checkbox") {
+      if (isValid) {
+        field.classList.remove("error");
+        errorElement.style.display = "none";
+      } else {
+        field.classList.add("error");
+        errorElement.style.display = "flex";
+      }
+      return;
+    }
+
     if (field.value.trim() === "") {
       field.classList.remove("error", "success");
       errorElement.style.display = "none";
@@ -213,7 +216,6 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       field.classList.remove("success");
       field.classList.add("error");
-      errorElement.querySelector("span").textContent = errorMessage;
       errorElement.style.display = "flex";
     }
   }
@@ -232,8 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldValidation(
         inputs.firstName.element,
         inputs.firstName.error,
-        false,
-        "First name must be at least 2 characters"
+        false
       );
       isValid = false;
     }
@@ -242,19 +243,13 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldValidation(
         inputs.lastName.element,
         inputs.lastName.error,
-        false,
-        "Last name must be at least 2 characters"
+        false
       );
       isValid = false;
     }
 
     if (!validateEmail(inputs.email.element.value)) {
-      updateFieldValidation(
-        inputs.email.element,
-        inputs.email.error,
-        false,
-        "Please enter a valid email address"
-      );
+      updateFieldValidation(inputs.email.element, inputs.email.error, false);
       isValid = false;
     }
 
@@ -262,8 +257,7 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldValidation(
         inputs.username.element,
         inputs.username.error,
-        false,
-        "Username must be 3-20 characters (letters, numbers, _)"
+        false
       );
       isValid = false;
     }
@@ -272,8 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldValidation(
         inputs.password.element,
         inputs.password.error,
-        false,
-        "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
+        false
       );
       isValid = false;
     }
@@ -284,19 +277,13 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFieldValidation(
         inputs.confirmPassword.element,
         inputs.confirmPassword.error,
-        false,
-        "Passwords do not match"
+        false
       );
       isValid = false;
     }
 
     if (!inputs.terms.element.checked) {
-      updateFieldValidation(
-        inputs.terms.element,
-        inputs.terms.error,
-        false,
-        "You must accept the terms and conditions"
-      );
+      updateFieldValidation(inputs.terms.element, inputs.terms.error, false);
       isValid = false;
     }
 
@@ -313,7 +300,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const originalText = submitButton.innerHTML;
 
     submitButton.innerHTML =
-      '<i class="bi bi-check-lg me-2"></i> Creating Account...';
+      '<i class="bi bi-check-lg"></i><span>Creating Account...</span>';
     submitButton.disabled = true;
 
     setTimeout(() => {
@@ -333,7 +320,7 @@ document.addEventListener("DOMContentLoaded", function () {
         registrationForm
       );
 
-      // Reset form
+      // Reset form after delay
       setTimeout(() => {
         registrationForm.reset();
         submitButton.innerHTML = originalText;
@@ -352,54 +339,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
         passwordStrength.className = "strength-meter";
         passwordText.textContent = "Password strength";
+
+        // Reset password visibility
+        passwordInput.type = "password";
+        confirmPasswordInput.type = "password";
+        passwordToggle.querySelector("i").className = "bi bi-eye";
+        confirmPasswordToggle.querySelector("i").className = "bi bi-eye";
       }, 3000);
     }, 2000);
   });
 
-  // ========== FLOATING PARTICLES ==========
-  const particlesContainer = document.getElementById("particles");
-  const particleCount = 30;
-
-  for (let i = 0; i < particleCount; i++) {
-    const particle = document.createElement("div");
-    particle.classList.add("particle");
-
-    // Random properties
-    const size = Math.random() * 5 + 2;
-    const left = Math.random() * 100;
-    const animationDuration = Math.random() * 20 + 10;
-    const animationDelay = Math.random() * 20;
-    const opacity = Math.random() * 0.5 + 0.1;
-
-    particle.style.width = `${size}px`;
-    particle.style.height = `${size}px`;
-    particle.style.left = `${left}%`;
-    particle.style.animationDuration = `${animationDuration}s`;
-    particle.style.animationDelay = `${animationDelay}s`;
-    particle.style.opacity = opacity;
-
-    particlesContainer.appendChild(particle);
-  }
-
-  // ========== 3D CARD TILT EFFECT ==========
+  // ========== 3D CARD TILT EFFECT (Desktop only) ==========
   const card = document.querySelector(".registration-card");
+  const isTouchDevice =
+    "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
-  card.addEventListener("mousemove", (e) => {
-    const cardRect = card.getBoundingClientRect();
-    const cardCenterX = cardRect.left + cardRect.width / 2;
-    const cardCenterY = cardRect.top + cardRect.height / 2;
+  if (!isTouchDevice && window.innerWidth > 768) {
+    card.addEventListener("mousemove", (e) => {
+      const cardRect = card.getBoundingClientRect();
+      const cardCenterX = cardRect.left + cardRect.width / 2;
+      const cardCenterY = cardRect.top + cardRect.height / 2;
 
-    const mouseX = e.clientX - cardCenterX;
-    const mouseY = e.clientY - cardCenterY;
+      const mouseX = e.clientX - cardCenterX;
+      const mouseY = e.clientY - cardCenterY;
 
-    const rotateX = (mouseY / cardRect.height) * 10;
-    const rotateY = (mouseX / cardRect.width) * -10;
+      const rotateX = (mouseY / cardRect.height) * 5;
+      const rotateY = (mouseX / cardRect.width) * -5;
 
-    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-10px)`;
-  });
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
+    });
 
-  card.addEventListener("mouseleave", () => {
-    card.style.transform =
-      "perspective(1000px) rotateX(0) rotateY(0) translateY(-10px)";
-  });
+    card.addEventListener("mouseleave", () => {
+      card.style.transform =
+        "perspective(1000px) rotateX(0) rotateY(0) translateY(0)";
+    });
+  }
 });

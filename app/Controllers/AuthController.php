@@ -29,7 +29,7 @@ class AuthController extends Controller
      */
     public function showLoginForm(): ResponseInterface
     {
-        return $this->view('auth.login');
+        return $this->view('pages.auth.login');
     }
 
     /**
@@ -50,5 +50,13 @@ class AuthController extends Controller
         // Logout logic here
 
         return $this->redirect('login');
+    }
+
+    /**
+     * Show Forgot Password Form
+     */
+    public function forgotPasswordForm(): ResponseInterface
+    {
+        return $this->view('pages.auth.forgot-password');
     }
 }

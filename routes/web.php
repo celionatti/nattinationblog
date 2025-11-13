@@ -28,6 +28,7 @@ Route::get('/signup', [AuthController::class, 'showSignUpForm'])->name('signup')
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->name('forgot-password');
 
 // Article Routes
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles');

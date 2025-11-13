@@ -27,15 +27,11 @@
         <div class="shape-1 bg-shape"></div>
         <div class="shape-2 bg-shape"></div>
         <div class="shape-3 bg-shape"></div>
-        <div class="shape-4 bg-shape"></div>
     </div>
-
-    <!-- ========== FLOATING PARTICLES ========== -->
-    <div class="particles" id="particles"></div>
 
     <!-- ========== THEME TOGGLE ========== -->
     <div class="theme-toggle-container">
-        <button class="theme-toggle" id="themeToggle">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
             <i class="bi bi-sun-fill" id="themeIcon"></i>
         </button>
     </div>
@@ -43,7 +39,6 @@
     @yield('content')
 
     <script src="{{ asset('assets/packages/bootstrap/js/bootstrap.min.js') }}"></script>
-    <script src="{{ asset('assets/js/auth.js') }}"></script>
     @stack('scripts')
 </body>
 
