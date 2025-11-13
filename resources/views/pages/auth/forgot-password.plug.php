@@ -8,7 +8,7 @@
 <div class="forgot-password-container">
     <div class="forgot-password-card">
         <div class="forgot-password-header">
-            <a href="/" class="forgot-password-logo">Natti<span>Nation</span></a>
+            <a href="{{ url('/') }}" class="forgot-password-logo">Natti<span>Nation</span></a>
         </div>
 
         <!-- Steps Indicator -->
@@ -67,7 +67,7 @@
             </form>
 
             <div class="back-to-login">
-                <a href="#" tabindex="0">
+                <a href="{{ url('login') }}" tabindex="0">
                     <i class="bi bi-arrow-left"></i>
                     Back to Sign In
                 </a>

@@ -17,8 +17,7 @@
 <!-- ========== MAIN NAVBAR ========== -->
 <nav class="navbar navbar-expand-lg main-navbar sticky-top">
     <div class="container">
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
-            data-bs-target="#mainNav">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
             <i class="bi bi-list" style="font-size: 1.5rem; color: var(--text-primary);"></i>
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
@@ -30,6 +29,62 @@
                 <li class="nav-item"><a class="nav-link" href="#">Politics</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Entertainment</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Nigeria</a></li>
+                <!-- Resources Menu -->
+                <li class="nav-item"><a class="nav-link" href="#resources">
+                        <i class="bi bi-folder-fill me-1"></i> Resources
+                    </a></li>
+
+                <!-- Services Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-briefcase-fill me-1"></i> Services
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
+                        <li>
+                            <a class="dropdown-item" href="#escrow-service">
+                                <i class="bi bi-shield-check"></i>
+                                <span>Escrow Service</span>
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#content-writing">
+                                <i class="bi bi-pencil-square"></i>
+                                <span>Content Writing</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#consultation">
+                                <i class="bi bi-chat-dots"></i>
+                                <span>Consultation</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#web-design">
+                                <i class="bi bi-code-slash"></i>
+                                <span>Web Design & Development</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#seo-services">
+                                <i class="bi bi-graph-up-arrow"></i>
+                                <span>SEO Services</span>
+                            </a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#all-services">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                                <span>View All Services</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             </ul>
         </div>
         <div class="d-flex align-items-center gap-3">

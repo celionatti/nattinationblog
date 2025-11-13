@@ -23,6 +23,10 @@ use App\Controllers\ArticleController;
 Route::get('/home', [HomeController::class, 'index']);
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+Route::group([], function () {
+    // Additional grouped routes can be defined here
+});
+
 // Authentication Routes
 Route::get('/signup', [AuthController::class, 'showSignUpForm'])->name('signup');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
