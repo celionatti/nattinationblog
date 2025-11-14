@@ -17,6 +17,7 @@ declare(strict_types=1);
 use Plugs\Facades\Route;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
+use App\Controllers\AdminController;
 use App\Controllers\ArticleController;
 
 
@@ -38,3 +39,11 @@ Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->n
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
 
 Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');
+
+// Admin Routes
+Route::group(['prefix' => '/admin'], function () {
+    // Admin specific routes can be defined here
+    Route::get('/', [AdminController::class, 'adminDashboard'])->name('admin');
+
+    Route::get('/dashboard', [AdminController::class, 'adminDashboard'])->name('admin.dashboard');
+});

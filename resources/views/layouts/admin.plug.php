@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', '') - {{ $app_name }}</title>
-    <meta name="description" content="@yield('meta_description', 'Welcome to ' . $app_name)">
+    <meta name="description" content="@yield('meta_description', 'Welcome to Admin' . $app_name)">
     <meta name="author" content="{{ $app_name }}">
     <meta name="keywords" content="@yield('meta_keywords', 'blog, articles, posts, ' . strtolower($app_name))">
     <link rel="shortcut icon" href="{{ asset('logo.png') }}" type="image/png">
@@ -17,22 +17,25 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}">
     @stack('styles')
 </head>
 
-<body class="loading">
-    <Loader />
-    <div class="main-content">
-        <Header />
+<body>
+    <Adminsidebar />
+    <!-- ========== MAIN CONTENT ========== -->
+    <div class="main-wrapper" id="mainWrapper">
+        <Adminheader />
 
-        @yield('content')
+        <!-- ========== DASHBOARD CONTENT ========== -->
+         <main class="dashboard-content">
+             @yield('content')
+         </main>
 
-        <Footer />
     </div>
 
     <script src="{{ asset('assets/packages/bootstrap/js/bootstrap.min.js') }}"></script>
-    <script src="{{ asset('assets/js/main.js') }}"></script>
+    <script src="{{ asset('assets/js/admin.js') }}"></script>
     @stack('scripts')
 </body>
 
