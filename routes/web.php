@@ -56,14 +56,24 @@ Route::group(['prefix' => '/admin'], function () {
 // For example, API routes, user profile routes, etc.
 
 // API Routes
-Route::group(['prefix' => '/api/settings'], function () {
-    Route::get('/', [AdminSettingController::class, 'getSettings']);
+// Route::group(['prefix' => '/api/settings'], function () {
+//     Route::get('/', [AdminSettingController::class, 'getSettings']);
 
-    Route::post('/', [AdminSettingController::class, 'saveSettings']);
+//     Route::post('/', [AdminSettingController::class, 'saveSettings']);
 
-    Route::get('/all', [AdminSettingController::class, 'getAllSettings']);
-    Route::post('/reset', [AdminSettingController::class, 'resetToDefaults']);
+//     Route::get('/all', [AdminSettingController::class, 'getAllSettings']);
+//     Route::post('/reset', [AdminSettingController::class, 'resetToDefaults']);
 
-    Route::get('/key/{key}', [AdminSettingController::class, 'getSettingByKey']);
-    Route::put('/key/{key}', [AdminSettingController::class, 'updateSettingByKey']);
+//     Route::get('/key/{key}', [AdminSettingController::class, 'getSettingByKey']);
+//     Route::put('/key/{key}', [AdminSettingController::class, 'updateSettingByKey']);
+// });
+
+Route::group(['prefix' => '/api'], function () {
+    // Settings endpoints
+    Route::get('/settings', [AdminSettingController::class, 'getSettings']);
+    Route::post('/settings', [AdminSettingController::class, 'saveSettings']);
+    Route::get('/settings/all', [AdminSettingController::class, 'getAllSettings']);
+    Route::post('/settings/reset', [AdminSettingController::class, 'resetToDefaults']);
+    Route::get('/settings/{key}', [AdminSettingController::class, 'getSettingByKey']);
+    Route::put('/settings/{key}', [AdminSettingController::class, 'updateSetting']);
 });

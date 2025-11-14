@@ -3,6 +3,29 @@ class SettingsManager {
     constructor() {
         this.apiUrl = '/api/settings';
         this.currentTab = 'general';
+        this.setupEventListeners();
+    }
+
+    // Setup event listeners for all buttons
+    setupEventListeners() {
+        // Save buttons
+        document.querySelectorAll('.btn-primary').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.saveSettings();
+            });
+        });
+
+        // Reset button
+        document.querySelectorAll('.btn-secondary').forEach(button => {
+            const text = button.textContent.toLowerCase();
+            if (text.includes('reset')) {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.resetToDefaults();
+                });
+            }
+        });
     }
 
     // Load settings for current tab
@@ -18,7 +41,7 @@ class SettingsManager {
             }
         } catch (error) {
             console.error('Error loading settings:', error);
-            this.showNotification('Error loading settings', 'error');
+            this.showNotification('Error loading settings: ' + error.message, 'error');
         }
     }
 
@@ -138,7 +161,8 @@ class SettingsManager {
     // Populate form with settings data
     populateForm(settings) {
         for (const [key, value] of Object.entries(settings)) {
-            const element = document.getElementById(this.kebabToCamel(key));
+            const elementId = this.snakeToCamel(key);
+            const element = document.getElementById(elementId);
             
             if (element) {
                 if (element.type === 'checkbox') {
@@ -153,9 +177,9 @@ class SettingsManager {
         }
     }
 
-    // Convert kebab-case to camelCase for element IDs
-    kebabToCamel(str) {
-        return str.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
+    // Convert snake_case to camelCase for element IDs
+    snakeToCamel(str) {
+        return str.replace(/_([a-z])/g, function (g) { return g[1].toUpperCase(); });
     }
 
     // Show notification
@@ -165,18 +189,42 @@ class SettingsManager {
 
         // Create notification element
         const notification = document.createElement('div');
-        notification.className = `custom-notification alert alert-${type} alert-dismissible fade show`;
+        notification.className = 'custom-notification';
+        
+        // Set color based on type
+        const colors = {
+            success: '#28a745',
+            error: '#dc3545',
+            info: '#17a2b8'
+        };
+        
         notification.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 9999;
             min-width: 300px;
+            padding: 1rem 1.5rem;
+            background-color: ${colors[type] || colors.info};
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            animation: slideIn 0.3s ease-out;
         `;
+        
         notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <span>${message}</span>
+            <button style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
         `;
+
+        // Add click to close
+        notification.querySelector('button').addEventListener('click', () => {
+            notification.remove();
+        });
 
         document.body.appendChild(notification);
 
@@ -192,17 +240,48 @@ class SettingsManager {
     async resetToDefaults() {
         if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
             try {
-                const response = await this.apiCall('POST', { action: 'reset' });
+                const response = await fetch('/api/settings/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
 
-                if (response.success) {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
                     this.showNotification('Settings reset to defaults successfully!', 'success');
                     this.loadSettings(); // Reload the form with default values
                 } else {
-                    this.showNotification('Failed to reset settings: ' + response.message, 'error');
+                    this.showNotification('Failed to reset settings: ' + result.message, 'error');
                 }
             } catch (error) {
                 this.showNotification('Error resetting settings: ' + error.message, 'error');
             }
         }
     }
+}
+
+// Add animation for notification
+if (!document.getElementById('notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }

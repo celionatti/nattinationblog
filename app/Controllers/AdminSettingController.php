@@ -32,9 +32,9 @@ class AdminSettingController extends Controller
     {
         $queryParams = $request->getQueryParams();
         $group = $queryParams['group'] ?? 'general';
-        
+
         $settings = Setting::getByGroup($group);
-        
+
         return $this->json([
             'success' => true,
             'data' => $settings
@@ -50,7 +50,7 @@ class AdminSettingController extends Controller
             // Parse JSON body for POST requests
             $body = $request->getBody()->getContents();
             $data = json_decode($body, true) ?? [];
-            
+
             $group = $data['group'] ?? 'general';
             $settings = $data['settings'] ?? [];
 
@@ -58,7 +58,7 @@ class AdminSettingController extends Controller
                 return $this->json([
                     'success' => false,
                     'message' => 'No settings provided'
-                ], $response->getStatusCode() ?? 400);
+                ], 400);
             }
 
             $result = Setting::updateMultiple($settings);
@@ -67,19 +67,19 @@ class AdminSettingController extends Controller
                 return $this->json([
                     'success' => true,
                     'message' => 'Settings saved successfully'
-                ], $response->getStatusCode());
+                ], 200);
             }
 
             return $this->json([
                 'success' => false,
                 'message' => 'Failed to save settings'
-            ], $response->getStatusCode() ?? 500);
+            ], 500);
 
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
-            ], $response->getStatusCode() ?? 500);
+            ], 500);
         }
     }
 
@@ -89,7 +89,7 @@ class AdminSettingController extends Controller
     public function getAllSettings(Request $request): Response
     {
         $settings = Setting::getAllSettings();
-        
+
         return $this->json([
             'success' => true,
             'data' => $settings
@@ -104,20 +104,20 @@ class AdminSettingController extends Controller
         try {
             // Delete all existing settings
             Setting::query()->delete();
-            
+
             // Initialize defaults
             Setting::initializeDefaults();
-            
+
             return $this->json([
                 'success' => true,
                 'message' => 'Settings reset to defaults successfully'
-            ], $response->getStatusCode());
-            
+            ], 200);
+
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Error resetting settings: ' . $e->getMessage()
-            ], $response->getStatusCode() ?? 500);
+            ], 500);
         }
     }
 
@@ -126,9 +126,8 @@ class AdminSettingController extends Controller
      */
     public function getSettingByKey(Request $request): Response
     {
-        // $key = $key ?? '';
         $key = $request->getAttribute('key') ?? '';
-        
+
         if (empty($key)) {
             return $this->json([
                 'success' => false,
@@ -137,7 +136,7 @@ class AdminSettingController extends Controller
         }
 
         $value = Setting::getValue($key);
-        
+
         return $this->json([
             'success' => true,
             'data' => [
@@ -150,21 +149,22 @@ class AdminSettingController extends Controller
     /**
      * Update a specific setting
      */
-    public function updateSetting(Request $request, Response $response, array $args): Response
+    public function updateSetting(Request $request, Response $response): Response
     {
         try {
-            $key = $args['key'] ?? '';
-            
+            // Get key from route attribute
+            $key = $request->getAttribute('key') ?? '';
+
             if (empty($key)) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Setting key is required'
-                ], $response->getStatusCode() ?? 400);
+                ], 400);
             }
 
             $body = $request->getBody()->getContents();
             $data = json_decode($body, true) ?? [];
-            
+
             $value = $data['value'] ?? null;
             $group = $data['group'] ?? null;
 
@@ -172,7 +172,7 @@ class AdminSettingController extends Controller
                 return $this->json([
                     'success' => false,
                     'message' => 'Setting value is required'
-                ], $response->getStatusCode() ?? 400);
+                ], 400);
             }
 
             $result = Setting::setValue($key, $value, $group);
@@ -181,19 +181,19 @@ class AdminSettingController extends Controller
                 return $this->json([
                     'success' => true,
                     'message' => 'Setting updated successfully'
-                ], $response->getStatusCode());
+                ], 200);
             }
 
             return $this->json([
                 'success' => false,
                 'message' => 'Failed to update setting'
-            ], $response->getStatusCode() ?? 500);
+            ], 500);
 
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
-            ], $response->getStatusCode() ?? 500);
+            ], 500);
         }
     }
 }

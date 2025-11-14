@@ -398,31 +398,31 @@
                 <div class="settings-card-body">
                     <div class="form-group">
                         <label for="siteTitle" class="form-label">Site Title</label>
-                        <input type="text" id="siteTitle" class="form-control" value="BlogName">
-                        <div class="form-text">The name of your blog as it appears to visitors.</div>
+                        <input type="text" id="siteTitle" class="form-control" value="">
+                        <div class="form-text">The name of your site as it appears to visitors.</div>
                     </div>
 
                     <div class="form-group">
                         <label for="siteTagline" class="form-label">Tagline</label>
-                        <input type="text" id="siteTagline" class="form-control" value="Just another WordPress site">
-                        <div class="form-text">In a few words, explain what your blog is about.</div>
+                        <input type="text" id="siteTagline" class="form-control" value="Just another site...">
+                        <div class="form-text">In a few words, explain what your site is about.</div>
                     </div>
 
                     <div class="form-group">
                         <label for="siteUrl" class="form-label">WordPress Address (URL)</label>
-                        <input type="url" id="siteUrl" class="form-control" value="https://blogname.com">
+                        <input type="url" id="siteUrl" class="form-control" value="https://yourdomain-name.com">
                     </div>
 
                     <div class="form-group">
                         <label for="siteAddress" class="form-label">Site Address (URL)</label>
-                        <input type="url" id="siteAddress" class="form-control" value="https://blogname.com">
+                        <input type="url" id="siteAddress" class="form-control" value="https://yourdomain-name.com">
                         <div class="form-text">Enter the address here if you want your site home page to be different
                             from your WordPress installation directory.</div>
                     </div>
 
                     <div class="form-group">
                         <label for="adminEmail" class="form-label">Administration Email Address</label>
-                        <input type="email" id="adminEmail" class="form-control" value="admin@blogname.com">
+                        <input type="email" id="adminEmail" class="form-control" value="admin@domain.com">
                         <div class="form-text">This address is used for admin purposes, like new user notification.
                         </div>
                     </div>
@@ -752,68 +752,83 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('assets/js/class/settings.js') }}"></script>
 <script>
-    // ========== SETTINGS TABS ==========
-    const settingsNavLinks = document.querySelectorAll('.settings-nav-link');
-    const tabContents = document.querySelectorAll('.tab-content');
+    document.addEventListener('DOMContentLoaded', function () {
 
-    settingsNavLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
+        const settingsManager = new SettingsManager();
+        // ========== SETTINGS TABS ==========
+        const settingsNavLinks = document.querySelectorAll('.settings-nav-link');
+        const tabContents = document.querySelectorAll('.tab-content');
 
-            // Remove active class from all links and tabs
-            settingsNavLinks.forEach(l => l.classList.remove('active'));
-            tabContents.forEach(tab => tab.classList.remove('active'));
+        settingsNavLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
 
-            // Add active class to clicked link
-            this.classList.add('active');
+                // Remove active class from all links and tabs
+                settingsNavLinks.forEach(l => l.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
 
-            // Show corresponding tab
-            const tabId = this.getAttribute('data-tab') + '-tab';
-            document.getElementById(tabId).classList.add('active');
+                // Add active class to clicked link
+                this.classList.add('active');
+
+                // Show corresponding tab
+                const tabId = this.getAttribute('data-tab') + '-tab';
+                document.getElementById(tabId).classList.add('active');
+
+                // Update current tab and load settings
+                settingsManager.currentTab = this.getAttribute('data-tab');
+                settingsManager.loadSettings();
+            });
         });
-    });
 
-    // ========== HOMEPAGE DISPLAY TOGGLE ==========
-    const homepageLatest = document.getElementById('homepageLatest');
-    const homepageStatic = document.getElementById('homepageStatic');
-    const homepagePage = document.getElementById('homepagePage');
-    const postsPage = document.getElementById('postsPage');
+        // Load initial settings
+        settingsManager.loadSettings();
 
-    homepageLatest.addEventListener('change', function () {
-        if (this.checked) {
-            homepagePage.disabled = true;
-            postsPage.disabled = true;
-        }
-    });
+        // Make manager globally available for button clicks
+        window.settingsManager = settingsManager;
 
-    homepageStatic.addEventListener('change', function () {
-        if (this.checked) {
-            homepagePage.disabled = false;
-            postsPage.disabled = false;
-        }
-    });
+        // ========== HOMEPAGE DISPLAY TOGGLE ==========
+        const homepageLatest = document.getElementById('homepageLatest');
+        const homepageStatic = document.getElementById('homepageStatic');
+        const homepagePage = document.getElementById('homepagePage');
+        const postsPage = document.getElementById('postsPage');
 
-    // ========== FORM SUBMISSION ==========
-    document.querySelectorAll('.btn-primary').forEach(button => {
-        button.addEventListener('click', function () {
-            const card = this.closest('.settings-card');
-            const title = card.querySelector('.settings-card-title').textContent;
-
-            // Show success message
-            alert(`${title} saved successfully!`);
-
-            // In a real application, you would submit the form data here
-            console.log('Settings saved for:', title);
+        homepageLatest.addEventListener('change', function () {
+            if (this.checked) {
+                homepagePage.disabled = true;
+                postsPage.disabled = true;
+            }
         });
-    });
 
-    // ========== DANGER ZONE ACTIONS ==========
-    document.querySelector('.btn-danger').addEventListener('click', function () {
-        if (confirm('Are you absolutely sure you want to delete this site? This action cannot be undone and all your data will be permanently lost.')) {
-            alert('Site deletion process initiated. You will receive a confirmation email.');
-            console.log('Site deletion requested');
-        }
+        homepageStatic.addEventListener('change', function () {
+            if (this.checked) {
+                homepagePage.disabled = false;
+                postsPage.disabled = false;
+            }
+        });
+
+        // ========== FORM SUBMISSION ==========
+        document.querySelectorAll('.btn-primary').forEach(button => {
+            button.addEventListener('click', function () {
+                const card = this.closest('.settings-card');
+                const title = card.querySelector('.settings-card-title').textContent;
+
+                // Show success message
+                alert(`${title} saved successfully!`);
+
+                // In a real application, you would submit the form data here
+                console.log('Settings saved for:', title);
+            });
+        });
+
+        // ========== DANGER ZONE ACTIONS ==========
+        document.querySelector('.btn-danger').addEventListener('click', function () {
+            if (confirm('Are you absolutely sure you want to delete this site? This action cannot be undone and all your data will be permanently lost.')) {
+                alert('Site deletion process initiated. You will receive a confirmation email.');
+                console.log('Site deletion requested');
+            }
+        });
     });
 </script>
 @endpush

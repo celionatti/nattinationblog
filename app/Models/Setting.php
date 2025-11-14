@@ -64,7 +64,7 @@ class Setting extends PlugModel
     }
 
     /**
-     * Get settings by group - FIXED
+     * Get settings by group
      */
     public static function getByGroup(string $group): array
     {
@@ -89,7 +89,7 @@ class Setting extends PlugModel
     }
 
     /**
-     * Get a specific setting value - FIXED
+     * Get a specific setting value
      */
     public static function getValue(string $key, $default = null)
     {
@@ -103,7 +103,7 @@ class Setting extends PlugModel
     }
 
     /**
-     * Set a setting value - FIXED
+     * Set a setting value
      */
     public static function setValue(string $key, $value, string $group = self::GROUP_GENERAL): bool
     {
