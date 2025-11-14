@@ -146,7 +146,7 @@
 
 @section('content')
 <!-- ========== ARTICLES HERO SECTION ========== -->
-<section class="articles-hero animate-on-scroll">
+<section class="page-hero animate-on-scroll">
     <div class="container text-center">
         <h1>All Articles</h1>
         <p>Explore our collection of articles covering a wide range of topics from technology and politics to entertainment and lifestyle.</p>

@@ -23,6 +23,7 @@
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link active" href="{{ url('/') }}">Home</a></li>
+                <?php if(true): ?>
                 <li class="nav-item"><a class="nav-link" href="{{ url('articles') }}">Articles</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">World</a></li>
                 <li class="nav-item"><a class="nav-link" href="#">Sports</a></li>
@@ -85,6 +86,7 @@
                         </li>
                     </ul>
                 </li>
+                <?php endif; ?>
             </ul>
         </div>
         <div class="d-flex align-items-center gap-3">
