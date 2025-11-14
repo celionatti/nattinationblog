@@ -9,13 +9,13 @@
 
     <ul class="sidebar-nav">
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link active">
+            <a href="{{ url('admin') }}" class="sidebar-nav-link {{ activeClass('/admin', exact: true) }}">
                 <i class="bi bi-speedometer2"></i>
                 Dashboard
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a href="{{ url('admin/articles') }}" class="sidebar-nav-link">
                 <i class="bi bi-file-earmark-text"></i>
                 Posts
             </a>
@@ -59,7 +59,7 @@
     <div class="sidebar-section-title">Settings</div>
     <ul class="sidebar-nav">
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a href="{{ url('admin/settings') }}" class="sidebar-nav-link {{ activeClass('/admin/settings', exact: true) }}">
                 <i class="bi bi-gear"></i>
                 Settings
             </a>

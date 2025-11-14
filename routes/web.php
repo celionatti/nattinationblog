@@ -19,6 +19,7 @@ use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\AdminController;
 use App\Controllers\ArticleController;
+use App\Controllers\AdminSettingController;
 
 
 Route::get('/home', [HomeController::class, 'index']);
@@ -46,4 +47,23 @@ Route::group(['prefix' => '/admin'], function () {
     Route::get('/', [AdminController::class, 'adminDashboard'])->name('admin');
 
     Route::get('/dashboard', [AdminController::class, 'adminDashboard'])->name('admin.dashboard');
+
+    // Admin Settings Route
+    Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
+});
+
+// Additional routes can be added below as needed
+// For example, API routes, user profile routes, etc.
+
+// API Routes
+Route::group(['prefix' => '/api/settings'], function () {
+    Route::get('/', [AdminSettingController::class, 'getSettings']);
+
+    Route::post('/', [AdminSettingController::class, 'saveSettings']);
+
+    Route::get('/all', [AdminSettingController::class, 'getAllSettings']);
+    Route::post('/reset', [AdminSettingController::class, 'resetToDefaults']);
+
+    Route::get('/key/{key}', [AdminSettingController::class, 'getSettingByKey']);
+    Route::put('/key/{key}', [AdminSettingController::class, 'updateSettingByKey']);
 });
