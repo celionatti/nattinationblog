@@ -23,70 +23,82 @@
         </button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link active" href="{{ url('/') }}">Home</a></li>
-                <?php if(true): ?>
-                <li class="nav-item"><a class="nav-link" href="{{ url('articles') }}">Articles</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">World</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Sports</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Politics</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Entertainment</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Nigeria</a></li>
-                <!-- Resources Menu -->
-                <li class="nav-item"><a class="nav-link" href="#resources">
-                        <i class="bi bi-folder-fill me-1"></i> Resources
-                    </a></li>
+                <li class="nav-item"><a class="nav-link {{ activeClass('/', exact: true) }}"
+                        href="{{ url('/') }}">Home</a></li>
+                <li class="nav-item"><a class="nav-link {{ activeClass('/articles', exact: true) }}"
+                        href="{{ url('articles') }}">Articles</a></li>
+                <?php if (isActive('/articles', true)): ?>
+                    <li class="nav-item"><a class="nav-link" href="#">World</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Sports</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Politics</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Entertainment</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Nigeria</a></li>
+                <?php endif; ?>
 
-                <!-- Services Dropdown -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-briefcase-fill me-1"></i> Services
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
-                        <li>
-                            <a class="dropdown-item" href="#escrow-service">
-                                <i class="bi bi-shield-check"></i>
-                                <span>Escrow Service</span>
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#content-writing">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Content Writing</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#consultation">
-                                <i class="bi bi-chat-dots"></i>
-                                <span>Consultation</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#web-design">
-                                <i class="bi bi-code-slash"></i>
-                                <span>Web Design & Development</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#seo-services">
-                                <i class="bi bi-graph-up-arrow"></i>
-                                <span>SEO Services</span>
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#all-services">
-                                <i class="bi bi-grid-3x3-gap"></i>
-                                <span>View All Services</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                <?php if (!isActive('/articles', true)): ?>
+
+                    <li class="nav-item"><a class="nav-link {{ activeClass('/events', exact: true) }}"
+                            href="{{ url('events') }}">
+                            Events
+                        </a></li>
+
+                    <!-- Resources Menu -->
+                    <li class="nav-item"><a class="nav-link {{ activeClass('/resources', exact: true) }}"
+                            href="{{ url('resources') }}">
+                            Resources
+                        </a></li>
+
+                    <!-- Services Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Services
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="servicesDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#escrow-service">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Escrow Service</span>
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#content-writing">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span>Content Writing</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#consultation">
+                                    <i class="bi bi-chat-dots"></i>
+                                    <span>Consultation</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#web-design">
+                                    <i class="bi bi-code-slash"></i>
+                                    <span>Web Design & Development</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#seo-services">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                    <span>SEO Services</span>
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#all-services">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                    <span>View All Services</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                 <?php endif; ?>
             </ul>
         </div>

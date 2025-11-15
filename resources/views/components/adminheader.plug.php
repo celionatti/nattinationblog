@@ -24,7 +24,7 @@
                 <div class="user-name">John Doe</div>
                 <div class="user-role">Administrator</div>
             </div>
-            <i class="bi bi-chevron-down" style="color: var(--text-secondary);"></i>
+            <!-- <i class="bi bi-chevron-down" style="color: var(--text-secondary);"></i> -->
         </div>
     </div>
 </header>
