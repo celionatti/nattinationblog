@@ -814,9 +814,6 @@
                 const card = this.closest('.settings-card');
                 const title = card.querySelector('.settings-card-title').textContent;
 
-                // Show success message
-                alert(`${title} saved successfully!`);
-
                 // In a real application, you would submit the form data here
                 console.log('Settings saved for:', title);
             });

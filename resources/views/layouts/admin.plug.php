@@ -35,6 +35,12 @@
     </div>
 
     <script src="{{ asset('assets/packages/bootstrap/js/bootstrap.min.js') }}"></script>
+
+    <script src="{{ asset('assets/js/global/api-helper.js') }}"></script>
+    <script src="{{ asset('assets/js/global/form-helper.js') }}"></script>
+    <script src="{{ asset('assets/js/global/notification.js') }}"></script>
+    <script src="{{ asset('assets/js/global/string-helper.js') }}"></script>
+
     <script src="{{ asset('assets/js/admin.js') }}"></script>
     @stack('scripts')
 </body>
