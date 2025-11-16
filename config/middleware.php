@@ -15,7 +15,7 @@ use App\Middlewares\AuthMiddleware;
 
 return [
     'aliases' => [
-        // 'auth' => AuthMiddleware::class,
+        'auth' => AuthMiddleware::class,
         // Add more aliases here
         // 'admin' => AdminMiddleware::class,
         // 'guest' => GuestMiddleware::class,
