@@ -31,6 +31,10 @@ Route::group([], function () {
 
 // Authentication Routes
 Route::get('/signup', [AuthController::class, 'showSignUpForm'])->name('signup');
+Route::post('/signup', [AuthController::class, 'createAccount'])->name('create-account');
+Route::post('/auth/check-username', [AuthController::class, 'checkUsername'])->name('check-username');
+Route::post('/auth/check-email', [AuthController::class, 'checkEmail'])->name('check-email');
+
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

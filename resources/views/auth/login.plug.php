@@ -87,32 +87,6 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // ========== THEME TOGGLE ==========
-        const themeToggle = document.getElementById('themeToggle');
-        const themeIcon = document.getElementById('themeIcon');
-        const body = document.body;
-
-        const savedTheme = localStorage.getItem('site_theme') || 'dark';
-
-        function setTheme(theme) {
-            if (theme === 'light') {
-                body.classList.remove('dark-mode');
-                themeIcon.classList.remove('bi-sun-fill');
-                themeIcon.classList.add('bi-moon-stars-fill');
-            } else {
-                body.classList.add('dark-mode');
-                themeIcon.classList.remove('bi-moon-stars-fill');
-                themeIcon.classList.add('bi-sun-fill');
-            }
-            localStorage.setItem('site_theme', theme);
-        }
-
-        setTheme(savedTheme);
-
-        themeToggle.addEventListener('click', () => {
-            const isDark = body.classList.contains('dark-mode');
-            setTheme(isDark ? 'light' : 'dark');
-        });
 
         // ========== PASSWORD TOGGLE ==========
         const passwordToggle = document.getElementById('passwordToggle');
@@ -244,28 +218,7 @@
         });
 
         // ========== 3D CARD TILT EFFECT (Desktop only) ==========
-        const card = document.querySelector('.login-card');
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-        if (!isTouchDevice && window.innerWidth > 768) {
-            card.addEventListener('mousemove', (e) => {
-                const cardRect = card.getBoundingClientRect();
-                const cardCenterX = cardRect.left + cardRect.width / 2;
-                const cardCenterY = cardRect.top + cardRect.height / 2;
-
-                const mouseX = e.clientX - cardCenterX;
-                const mouseY = e.clientY - cardCenterY;
-
-                const rotateX = (mouseY / cardRect.height) * 5;
-                const rotateY = (mouseX / cardRect.width) * -5;
-
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-5px)`;
-            });
-
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0)';
-            });
-        }
+        
     });
 </script>
 @endpush
