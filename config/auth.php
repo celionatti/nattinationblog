@@ -77,4 +77,10 @@ return [
     'use_timestamps' => true,
     'created_at_column' => 'created_at',
     'updated_at_column' => 'updated_at',
+    'email_verification' => [
+        'enabled' => false,
+        'token_length' => 6,
+        'expiry_hours' => 24,
+        'send_welcome_email' => false,
+    ],
 ];

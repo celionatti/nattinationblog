@@ -74,7 +74,8 @@ class AuthController extends Controller
                     'name' => $userData['name'],
                     'username' => $userData['username'],
                     'status' => 'active',
-                    'role' => 'user'
+                    'role' => 'user',
+                    'last_login_ip' => $_SERVER['REMOTE_ADDR']
                 ]
             );
 
@@ -196,15 +197,15 @@ class AuthController extends Controller
         try {
             $model = $this->auth->getUserModel();
             $emailColumn = $this->auth->getConfig('email_column');
-            
+
             if (!$emailColumn) {
                 $this->logError('Email column not configured');
                 return true; // Changed: If no email column, allow registration
             }
-            
+
             $exists = $model::where($emailColumn, $email)->exists();
             $this->logError("Email check: $email - Exists: " . ($exists ? 'yes' : 'no'));
-            
+
             return !$exists; // true means available
         } catch (\Exception $e) {
             $this->logError('Email availability check error: ' . $e->getMessage());
@@ -221,7 +222,7 @@ class AuthController extends Controller
             $model = $this->auth->getUserModel();
             $exists = $model::where('username', $username)->exists();
             $this->logError("Username check: $username - Exists: " . ($exists ? 'yes' : 'no'));
-            
+
             return !$exists; // true means available
         } catch (\Exception $e) {
             $this->logError('Username availability check error: ' . $e->getMessage());
@@ -237,11 +238,11 @@ class AuthController extends Controller
         try {
             $body = $request->getBody()->getContents();
             $data = json_decode($body, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return $this->json(['available' => false, 'valid' => false]);
             }
-            
+
             $email = trim($data['email'] ?? '');
 
             if (empty($email)) {
@@ -269,11 +270,11 @@ class AuthController extends Controller
         try {
             $body = $request->getBody()->getContents();
             $data = json_decode($body, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return $this->json(['available' => false, 'valid' => false]);
             }
-            
+
             $username = trim($data['username'] ?? '');
 
             if (empty($username)) {
@@ -345,10 +346,24 @@ class AuthController extends Controller
             $password = $data['password'] ?? '';
             $remember = isset($data['remember']) && ($data['remember'] === true || $data['remember'] === 'on');
 
-            if (empty($email) || empty($password)) {
+            // Basic validation
+            $errors = [];
+
+            if (empty($email)) {
+                $errors['email'] = ['Email is required'];
+            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors['email'] = ['Please enter a valid email address'];
+            }
+
+            if (empty($password)) {
+                $errors['password'] = ['Password is required'];
+            }
+
+            if (!empty($errors)) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Email and password are required'
+                    'message' => 'Please fix the validation errors',
+                    'errors' => $errors
                 ], 422);
             }
 
@@ -357,21 +372,31 @@ class AuthController extends Controller
             if ($loggedIn) {
                 return $this->json([
                     'success' => true,
-                    'message' => 'Login successful',
+                    'message' => 'Login successful! Welcome back.',
                     'redirect' => url('/')
                 ]);
             }
 
             return $this->json([
                 'success' => false,
-                'message' => 'Invalid email or password'
+                'message' => 'Invalid email or password. Please try again.'
             ], 401);
 
         } catch (\Exception $e) {
             $this->logError('Login error: ' . $e->getMessage());
+
+            // Check if it's an email verification error
+            if (strpos($e->getMessage(), 'verify your email') !== false) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'needs_verification' => true
+                ], 403);
+            }
+
             return $this->json([
                 'success' => false,
-                'message' => 'An error occurred during login'
+                'message' => 'An error occurred during login. Please try again.'
             ], 500);
         }
     }
