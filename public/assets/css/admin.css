@@ -410,6 +410,41 @@ textarea.form-control {
   resize: vertical;
 }
 
+/* ========== SUMMERNOTE EDITOR STYLING ========== */
+.note-editor.note-frame {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.note-editor.note-frame .note-toolbar {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem;
+}
+
+.note-editor.note-frame .note-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.note-editor.note-frame .note-btn:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.note-editor.note-frame .note-editable {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 400px;
+  padding: 1.5rem;
+}
+
+.note-editor.note-frame .note-statusbar {
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
 /* ========== RICH TEXT EDITOR ========== */
 .editor-toolbar {
   display: flex;
@@ -499,34 +534,6 @@ textarea.form-control {
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
-}
-
-/* ========== TAGS INPUT ========== */
-.tags-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.tag {
-  background-color: var(--accent-light);
-  color: var(--accent);
-  padding: 0.3rem 0.75rem;
-  border-radius: 50px;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tag-remove {
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  padding: 0;
-  font-size: 1rem;
 }
 
 /* ========== SEO PREVIEW ========== */
@@ -1135,6 +1142,10 @@ textarea.form-control {
 
   .editor-toolbar {
     justify-content: center;
+  }
+
+  .note-editor.note-frame .note-toolbar .note-btn-group {
+    margin-bottom: 0.5rem;
   }
 }
 

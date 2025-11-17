@@ -2,6 +2,29 @@
 
 @section('title', 'Admin Articles Create')
 
+@push('styles')
+<!-- Summernote CSS -->
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet">
+
+<style>
+    /* ========== FORM VALIDATION STYLES ========== */
+    .is-invalid {
+        border-color: var(--danger) !important;
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+    }
+
+    .error-message {
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .form-control.is-invalid:focus {
+        border-color: var(--danger);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+    }
+</style>
+@endpush
+
 @section('content')
 <h1 class="page-title">Create New Post</h1>
 <p class="page-subtitle">Write and publish engaging content for your audience.</p>
@@ -14,15 +37,18 @@
             <div class="editor-card-body">
                 <div class="form-group">
                     <input type="text" class="form-control" id="postTitle" placeholder="Add title"
-                        style="font-size: 1.5rem; font-weight: 700; border: none; padding: 0; background: transparent;" autocomplete="off">
+                        style="font-size: 1.5rem; font-weight: 700; border: none; padding: 0; background: transparent;"
+                        autocomplete="off">
                 </div>
             </div>
         </div>
 
-        <!-- Rich Text Editor -->
+        <!-- Summernote Editor -->
         <div class="editor-card">
-            <div class="editor-toolbar">
-                <textarea name="content" class="editor-content-area" id="postContent"></textarea>
+            <div class="editor-card-body">
+                <div class="form-group">
+                    <textarea id="summernote" class="form-control"></textarea>
+                </div>
             </div>
         </div>
 
@@ -163,39 +189,32 @@
 @endsection
 
 @push('scripts')
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Summernote JS -->
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
 <script>
-    // ========== RICH TEXT EDITOR ==========
-    const editorBtns = document.querySelectorAll('.editor-btn');
-    const postContent = document.getElementById('postContent');
-
-    editorBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
-            const command = this.dataset.command;
-            const value = this.dataset.value;
-
-            if (command === 'createLink') {
-                const url = prompt('Enter the URL:');
-                if (url) {
-                    document.execCommand(command, false, url);
+    // ========== SUMMERNOTE INITIALIZATION ==========
+    $(document).ready(function () {
+        $('#summernote').summernote({
+            height: 400,
+            placeholder: 'Start writing your post...',
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['fontname', ['fontname']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['table', ['table']],
+                ['insert', ['link', 'picture', 'video']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ],
+            callbacks: {
+                onChange: function (contents, $editable) {
+                    // Auto-save functionality
+                    startAutoSave();
                 }
-            } else if (command === 'insertImage') {
-                const url = prompt('Enter the image URL:');
-                if (url) {
-                    document.execCommand(command, false, url);
-                }
-            } else if (value) {
-                document.execCommand(command, false, value);
-            } else {
-                document.execCommand(command, false, null);
             }
-
-            // Update active state for format buttons
-            if (command === 'formatBlock') {
-                editorBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            }
-
-            postContent.focus();
         });
     });
 
