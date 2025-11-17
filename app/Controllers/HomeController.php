@@ -18,7 +18,10 @@ class HomeController extends Controller
      */
     public function index(ServerRequestInterface $request): ResponseInterface
     {
-        $data = [];
+        // dd(auth_user());
+        $data = [
+            'auth' => $request->getAttribute('auth_user_id'),
+        ];
         return $this->view('pages.index', $data);
     }
 }

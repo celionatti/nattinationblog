@@ -27,6 +27,7 @@ return [
         'storage' => BASE_PATH . 'storage',
     ],
     'required_files' => [
-        'function' => BASE_PATH . 'utils/function.php'
+        'function' => BASE_PATH . 'utils/function.php',
+        'auth' => BASE_PATH . 'utils/auth.php'
     ],
 ];

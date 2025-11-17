@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Middlewares\AdminMiddleware;
 use App\Middlewares\AuthMiddleware;
+use App\Middlewares\GuestMiddleware;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +18,8 @@ use App\Middlewares\AuthMiddleware;
 return [
     'aliases' => [
         'auth' => AuthMiddleware::class,
+        'guest' => GuestMiddleware::class,
+        'admin' => AdminMiddleware::class,
         // Add more aliases here
         // 'admin' => AdminMiddleware::class,
         // 'guest' => GuestMiddleware::class,

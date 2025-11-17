@@ -7,9 +7,16 @@
             </button>
             <a href="/" class="brand">Natti<span>Nation</span></a>
             <div class="auth-links">
-                <a href="{{ url('admin') }}"><i class="bi bi-person-circle me-1"></i> Admin</a>
-                <a href="{{ url('login') }}"><i class="bi bi-person-circle me-1"></i> Login</a>
-                <a href="{{ url('signup') }}"><i class="bi bi-person-plus-fill me-1"></i> Sign Up</a>
+                <?php if (auth_check()): ?>
+                    <a href="{{ url('profile') }}"><i class="bi bi-person-circle me-1"></i> {{ auth_user()->name }}</a>
+                    <?php if (auth_user()->role !== 'user'): ?>
+                        <a href="{{ url('admin') }}"><i class="bi bi-person-gear me-1"></i> Dashboard</a>
+                    <?php endif; ?>
+                    <a href="{{ url('logout') }}"><i class="bi bi-power text-danger"></i> Logout</a>
+                <?php else: ?>
+                    <a href="{{ url('login') }}"><i class="bi bi-person-circle me-1"></i> Login</a>
+                    <a href="{{ url('signup') }}"><i class="bi bi-person-plus-fill me-1"></i> Sign Up</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>

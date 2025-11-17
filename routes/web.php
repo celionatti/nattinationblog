@@ -22,23 +22,26 @@ use App\Controllers\ArticleController;
 use App\Controllers\AdminSettingController;
 
 
-Route::get('/home', [HomeController::class, 'index']);
-Route::get('/', [HomeController::class, 'index'])->name('home');
+// Route::get('/home', [HomeController::class, 'index']);
+// Route::get('/', [HomeController::class, 'index'])->name('home')->middleware('auth');
 
-Route::group([], function () {
-    // Additional grouped routes can be defined here
+Route::group(['prefix' => '/', 'middleware' => []], function () {
+    Route::get('', [HomeController::class, 'index']);
+    Route::get('home', [HomeController::class, 'index']);
 });
 
-// Authentication Routes
-Route::get('/signup', [AuthController::class, 'showSignUpForm'])->name('signup');
-Route::post('/signup', [AuthController::class, 'createAccount'])->name('create-account');
-Route::post('/auth/check-username', [AuthController::class, 'checkUsername'])->name('check-username');
-Route::post('/auth/check-email', [AuthController::class, 'checkEmail'])->name('check-email');
+Route::group(['prefix' => '/', 'middleware' => ['guest']], function () {
+    // Authentication Routes
+    Route::get('/signup', [AuthController::class, 'showSignUpForm'])->name('signup');
+    Route::post('/signup', [AuthController::class, 'createAccount'])->name('create-account');
+    Route::post('/auth/check-username', [AuthController::class, 'checkUsername'])->name('check-username');
+    Route::post('/auth/check-email', [AuthController::class, 'checkEmail'])->name('check-email');
 
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->name('forgot-password');
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->name('forgot-password');
+});
 
 // Article Routes
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
@@ -46,7 +49,7 @@ Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
 Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');
 
 // Admin Routes
-Route::group(['prefix' => '/admin'], function () {
+Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     // Admin specific routes can be defined here
     Route::get('/', [AdminController::class, 'adminDashboard'])->name('admin');
 

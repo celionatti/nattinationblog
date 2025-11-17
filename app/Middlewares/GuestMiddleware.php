@@ -6,7 +6,7 @@ namespace App\Middlewares;
 
 /*
 |--------------------------------------------------------------------------
-| AuthMiddleware Class
+| GuestMiddleware Class
 |--------------------------------------------------------------------------
 |
 | Middleware class for handling authentication.
@@ -18,22 +18,22 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Plugs\Http\ResponseFactory;
 
-class AuthMiddleware implements MiddlewareInterface
+class GuestMiddleware implements MiddlewareInterface
 {
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         // Check if user is authenticated
-        if (!isset($_SESSION['auth_user_id'])) {
+        if (isset($_SESSION['auth_user_id'])) {
             if ($this->isApiRequest($request)) {
-                return ResponseFactory::json(['error' => 'Unauthorized', 'message' => 'Please log in to access this resource'], 401);
+                return ResponseFactory::json(['error' => 'Already authenticated', 'message' => 'You are already logged in'], 403);
             }
 
             // Redirect to login for web requests
-            return ResponseFactory::redirect('/login');
+            return ResponseFactory::redirect('/');
         }
 
         // Add user to request
-        $request = $request->withAttribute('auth_user_id', $_SESSION['auth_user_id']);
+        // $request = $request->withAttribute('auth_user_id', $_SESSION['auth_user_id']);
 
         return $handler->handle($request);
     }
