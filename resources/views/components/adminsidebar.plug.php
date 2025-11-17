@@ -15,25 +15,25 @@
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="{{ url('admin/articles') }}" class="sidebar-nav-link">
-                <i class="bi bi-file-earmark-text"></i>
-                Posts
+            <a href="{{ url('admin/articles') }}" class="sidebar-nav-link {{ activeClass('/admin/articles', exact: true) }}">
+                <i class="bi bi-newspaper"></i>
+                Articles
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a href="{{ url('admin/categories') }}" class="sidebar-nav-link {{ activeClass('/admin/categories', exact: true) }}">
                 <i class="bi bi-folder"></i>
                 Categories
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a href="{{ url('admin/comments') }}" class="sidebar-nav-link {{ activeClass('/admin/comments', exact: true) }}">
                 <i class="bi bi-chat-dots"></i>
                 Comments
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="#" class="sidebar-nav-link">
+            <a href="{{ url('admin/users') }}" class="sidebar-nav-link {{ activeClass('/admin/users', exact: true) }}">
                 <i class="bi bi-people"></i>
                 Users
             </a>

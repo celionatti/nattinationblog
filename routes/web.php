@@ -14,6 +14,7 @@ declare(strict_types=1);
 | Using the Route facade for clean, static route definitions.
 */
 
+use App\Controllers\AdminArticleController;
 use Plugs\Facades\Route;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
@@ -25,9 +26,15 @@ use App\Controllers\AdminSettingController;
 // Route::get('/home', [HomeController::class, 'index']);
 // Route::get('/', [HomeController::class, 'index'])->name('home')->middleware('auth');
 
+// Articles and HomePage Routes(Open Routes)
 Route::group(['prefix' => '/', 'middleware' => []], function () {
     Route::get('', [HomeController::class, 'index']);
     Route::get('home', [HomeController::class, 'index']);
+
+    // Article Routes
+    Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
+
+    Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');
 });
 
 Route::group(['prefix' => '/', 'middleware' => ['guest']], function () {
@@ -43,17 +50,16 @@ Route::group(['prefix' => '/', 'middleware' => ['guest']], function () {
     Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->name('forgot-password');
 });
 
-// Article Routes
-Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
-
-Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');
-
 // Admin Routes
 Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     // Admin specific routes can be defined here
     Route::get('/', [AdminController::class, 'adminDashboard'])->name('admin');
 
     Route::get('/dashboard', [AdminController::class, 'adminDashboard'])->name('admin.dashboard');
+
+    // Admin Articles
+    Route::get('/articles', [AdminArticleController::class, 'manage']);
+    Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle']);
 
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
@@ -63,18 +69,6 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 // For example, API routes, user profile routes, etc.
 
 // API Routes
-// Route::group(['prefix' => '/api/settings'], function () {
-//     Route::get('/', [AdminSettingController::class, 'getSettings']);
-
-//     Route::post('/', [AdminSettingController::class, 'saveSettings']);
-
-//     Route::get('/all', [AdminSettingController::class, 'getAllSettings']);
-//     Route::post('/reset', [AdminSettingController::class, 'resetToDefaults']);
-
-//     Route::get('/key/{key}', [AdminSettingController::class, 'getSettingByKey']);
-//     Route::put('/key/{key}', [AdminSettingController::class, 'updateSettingByKey']);
-// });
-
 Route::group(['prefix' => '/api'], function () {
     // Settings endpoints
     Route::get('/settings', [AdminSettingController::class, 'getSettings']);
