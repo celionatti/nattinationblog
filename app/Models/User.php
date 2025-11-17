@@ -12,7 +12,6 @@ namespace App\Models;
 | It includes attributes and methods for managing users configurations.
 */
 
-use PDO;
 use Plugs\Base\Model\PlugModel;
 
 /**
