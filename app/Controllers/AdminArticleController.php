@@ -12,10 +12,12 @@ namespace App\Controllers;
 | Includes draft/revision system, category management, and image uploads.
 */
 
+use Exception;
 use App\Models\Article;
 use App\Models\Category;
-use App\Models\ArticleRevision;
+use Plugs\Upload\FileUploader;
 use Plugs\Upload\UploadedFile;
+use App\Models\ArticleRevision;
 use Plugs\Base\Controller\Controller;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -39,7 +41,7 @@ class AdminArticleController extends Controller
             ];
 
             return $this->view('admin.articles.manage', $data);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Failed to load articles: ' . $e->getMessage()
@@ -65,7 +67,7 @@ class AdminArticleController extends Controller
             ];
 
             return $this->view('admin.articles.create', $data);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->json([
                 'success' => false,
                 'message' => 'Failed to load page: ' . $e->getMessage()
@@ -79,230 +81,161 @@ class AdminArticleController extends Controller
     public function createArticle(Request $request): Response
     {
         try {
+            // Get form data
+            $data = $request->getParsedBody();
+
+            // Get current user ID
+            $userId = $this->getCurrentUserId($request);
+
+            if (!$userId) {
+                // Redirect to login if not authenticated
+                return $this->redirect('/admin/login');
+            }
+
+            // Determine if publishing or saving as draft
+            $isPublishing = isset($data['publish']) ||
+                (isset($data['action']) && $data['action'] === 'publish');
+
+            // Validate article data
+            $errors = $this->validateArticleData($data, $isPublishing);
+
+            if (!empty($errors)) {
+                // Store errors in session and redirect back
+                $_SESSION['form_errors'] = $errors;
+                $_SESSION['form_data'] = $data;
+                return $this->redirect('/admin/articles/create');
+            }
+
             // Start transaction
             Article::beginTransaction();
 
-            // Get JSON data from request
-            $data = $request->getParsedBody();
+            // Handle featured image upload
+            $featuredImagePath = null;
+            if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
+                try {
+                    $featuredImagePath = $this->handleFeaturedImageUpload($_FILES['featured_image']);
+                } catch (Exception $e) {
+                    Article::rollBack();
 
-            // Validate required fields
-            $errors = $this->validateArticleData($data, true);
-            if (!empty($errors)) {
-                Article::rollBack();
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $errors
-                ], 422);
+                    $_SESSION['form_errors'] = ['featured_image' => $e->getMessage()];
+                    $_SESSION['form_data'] = $data;
+                    return $this->redirect('/admin/articles/create');
+                }
             }
 
-            $userId = $this->getCurrentUserId($request);
-            if (!$userId) {
-                Article::rollBack();
-                return $this->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
-            }
-
-            // Generate unique slug
+            // Generate slug from title
             $slug = $this->generateSlug($data['title']);
 
-            // Create article
-            $article = Article::create([
+            // Auto-generate excerpt if not provided
+            $excerpt = !empty($data['excerpt'])
+                ? $data['excerpt']
+                : $this->generateExcerpt($data['content']);
+
+            // Prepare article data
+            $articleData = [
                 'title' => $data['title'],
                 'slug' => $slug,
                 'content' => $data['content'],
-                'excerpt' => $data['excerpt'] ?? $this->generateExcerpt($data['content']),
-                'featured_image' => $data['featured_image'] ?? null,
-                'seo_title' => $data['seo_title'] ?? substr($data['title'], 0, 60),
+                'excerpt' => $excerpt,
+                'author_id' => $userId,
+                'category_id' => $data['categories'] ?? null,
+                'featured_image' => $featuredImagePath,
+                'status' => $isPublishing ? 'published' : 'draft',
+                'published_at' => $isPublishing ? date('Y-m-d H:i:s') : null,
+
+                // SEO fields
+                'seo_title' => $data['seo_title'] ?? null,
                 'seo_description' => $data['seo_description'] ?? null,
                 'seo_keywords' => $data['seo_keywords'] ?? null,
-                'status' => 'published',
-                'published_at' => date('Y-m-d H:i:s'),
-                'author_id' => $userId,
-            ]);
+            ];
+
+            // Create article
+            $article = Article::create($articleData);
 
             if (!$article) {
-                Article::rollBack();
-                throw new \Exception('Failed to create article');
+                throw new Exception('Failed to create article');
             }
 
             // Create initial revision
-            $this->createRevision($article, $userId, 'Initial publication');
+            $this->createRevision(
+                $article,
+                $userId,
+                $isPublishing ? 'Initial publication' : 'Initial draft'
+            );
 
-            // Attach categories if provided
-            if (!empty($data['categories']) && is_array($data['categories'])) {
-                $this->attachCategories($article->id, $data['categories']);
-            }
-
+            // Commit transaction
             Article::commit();
 
-            return $this->json([
-                'success' => true,
-                'message' => 'Article published successfully!',
-                'article_id' => $article->id,
-                'slug' => $article->slug,
-                'redirect_url' => '/admin/articles'
-            ], 201);
+            // Clear form data from session
+            unset($_SESSION['form_errors'], $_SESSION['form_data']);
 
-        } catch (\Exception $e) {
-            Article::rollBack();
-            return $this->json([
-                'success' => false,
-                'message' => 'Failed to create article: ' . $e->getMessage()
-            ], 500);
+            // Set success message
+            $_SESSION['success_message'] = $isPublishing
+                ? 'Article published successfully!'
+                : 'Article saved as draft.';
+
+            // Redirect to article edit page or list
+            return $this->redirect('/admin/articles/' . $article->id . '/edit');
+
+        } catch (Exception $e) {
+            // Rollback transaction
+            if (Article::transactionLevel() > 0) {
+                Article::rollBack();
+            }
+
+            // Delete uploaded image if article creation failed
+            if (isset($featuredImagePath) && file_exists($featuredImagePath)) {
+                @unlink($featuredImagePath);
+            }
+
+            // Log error
+            error_log('Article creation failed: ' . $e->getMessage());
+
+            // Store error and redirect back
+            $_SESSION['form_errors'] = ['general' => 'Failed to create article: ' . $e->getMessage()];
+            $_SESSION['form_data'] = $data ?? [];
+
+            return $this->redirect('/admin/articles/create');
         }
     }
 
     /**
-     * Save article as draft or create draft revision
+     * Handle featured image upload
      */
-    public function saveDraft(Request $request): Response
+    private function handleFeaturedImageUpload(array $fileData): string
     {
-        try {
-            Article::beginTransaction();
+        // Define upload path
+        $uploadPath = defined('BASE_PATH')
+            ? BASE_PATH . '/uploads/articles/featured'
+            : dirname(__DIR__, 2) . '/uploads/articles/featured';
 
-            $data = $request->getParsedBody();
+        // Create uploader instance
+        $uploader = new FileUploader($uploadPath);
 
-            // Basic validation for drafts (only title required)
-            if (empty($data['title'])) {
-                Article::rollBack();
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Title is required',
-                    'errors' => ['title' => 'Title field is required']
-                ], 422);
-            }
+        // Configure for images only
+        $uploader->imagesOnly(5 * 1024 * 1024) // 5MB max
+            ->setImageDimensions(
+                maxWidth: 2000,
+                maxHeight: 2000,
+                minWidth: 400,
+                minHeight: 300
+            )
+            ->generateUniqueName(true)
+            ->organizeByDate(true)
+            ->preventDuplicates(false)
+            ->allowSvg(false); // Disable SVG for security
 
-            $userId = $this->getCurrentUserId($request);
-            if (!$userId) {
-                Article::rollBack();
-                return $this->json([
-                    'success' => false,
-                    'message' => 'User not authenticated'
-                ], 401);
-            }
+        // Create UploadedFile instance
+        $file = new UploadedFile($fileData);
 
-            // Check if this is an update to existing draft
-            $articleId = $data['article_id'] ?? null;
-            
-            if ($articleId) {
-                // Update existing article
-                $article = Article::find($articleId);
-                
-                if (!$article) {
-                    Article::rollBack();
-                    return $this->json([
-                        'success' => false,
-                        'message' => 'Article not found'
-                    ], 404);
-                }
+        // Get user identifier for rate limiting
+        $userIdentifier = $_SESSION['auth_user_id'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 
-                // Update article
-                $article->update([
-                    'title' => $data['title'],
-                    'content' => $data['content'] ?? '',
-                    'excerpt' => $data['excerpt'] ?? '',
-                    'featured_image' => $data['featured_image'] ?? $article->featured_image,
-                    'seo_title' => $data['seo_title'] ?? substr($data['title'], 0, 60),
-                    'seo_description' => $data['seo_description'] ?? null,
-                    'seo_keywords' => $data['seo_keywords'] ?? null,
-                ]);
+        // Upload file
+        $result = $uploader->upload($file, null);
 
-                // Create revision
-                $this->createRevision($article, $userId, 'Draft update');
-
-            } else {
-                // Create new draft article
-                $slug = $this->generateSlug($data['title']);
-
-                $article = Article::create([
-                    'title' => $data['title'],
-                    'slug' => $slug,
-                    'content' => $data['content'] ?? '',
-                    'excerpt' => $data['excerpt'] ?? '',
-                    'featured_image' => $data['featured_image'] ?? null,
-                    'seo_title' => $data['seo_title'] ?? substr($data['title'], 0, 60),
-                    'seo_description' => $data['seo_description'] ?? null,
-                    'seo_keywords' => $data['seo_keywords'] ?? null,
-                    'status' => 'draft',
-                    'author_id' => $userId,
-                ]);
-
-                if (!$article) {
-                    Article::rollBack();
-                    throw new \Exception('Failed to save draft');
-                }
-
-                // Create initial revision
-                $this->createRevision($article, $userId, 'Initial draft');
-            }
-
-            // Update categories if provided
-            if (!empty($data['categories']) && is_array($data['categories'])) {
-                $this->syncCategories($article->id, $data['categories']);
-            }
-
-            Article::commit();
-
-            return $this->json([
-                'success' => true,
-                'message' => 'Draft saved successfully!',
-                'draft_id' => $article->id,
-                'slug' => $article->slug
-            ], 200);
-
-        } catch (\Exception $e) {
-            Article::rollBack();
-            return $this->json([
-                'success' => false,
-                'message' => 'Failed to save draft: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Upload featured image
-     */
-    public function uploadFeaturedImage(Request $request): Response
-    {
-        try {
-            // Get uploaded file using the helper method
-            $file = $this->file($request, 'featured_image');
-
-            if (!$file) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'No file uploaded'
-                ], 400);
-            }
-
-            // Validate and upload image using the Controller's upload helper
-            $result = $this->upload($file, [
-                'path' => 'public/uploads/articles',
-                'allowed' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-                'maxSize' => 5242880 // 5MB
-            ]);
-
-            return $this->json([
-                'success' => true,
-                'message' => 'Image uploaded successfully',
-                'file_path' => $result['url'],
-                'file_info' => [
-                    'name' => $result['name'],
-                    'size' => $result['size'],
-                    'type' => $result['type'],
-                    'dimensions' => $result['dimensions'] ?? null
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage()
-            ], 500);
-        }
+        // Return the relative path (for storage in database)
+        return $result['relative_path'];
     }
 
     /**
@@ -330,7 +263,7 @@ class AdminArticleController extends Controller
             ]);
 
             return true;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log error but don't fail the main operation
             error_log("Failed to create revision: " . $e->getMessage());
             return false;
@@ -380,6 +313,11 @@ class AdminArticleController extends Controller
             $errors['seo_keywords'] = 'SEO keywords should not exceed 255 characters';
         }
 
+        // Category validation (optional but recommended for publishing)
+        if ($isPublishing && empty($data['categories'])) {
+            $errors['categories'] = 'Please select a category for your article';
+        }
+
         return $errors;
     }
 
@@ -390,33 +328,33 @@ class AdminArticleController extends Controller
     {
         // Convert to lowercase
         $slug = strtolower(trim($title));
-        
+
         // Replace spaces with hyphens
         $slug = preg_replace('/\s+/', '-', $slug);
-        
+
         // Remove special characters
         $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
-        
+
         // Remove consecutive hyphens
         $slug = preg_replace('/-+/', '-', $slug);
-        
+
         // Trim hyphens from ends
         $slug = trim($slug, '-');
-        
+
         // Ensure we have something
         if (empty($slug)) {
             $slug = 'article-' . time();
         }
-        
+
         // Ensure uniqueness
         $originalSlug = $slug;
         $counter = 1;
-        
+
         while (Article::where('slug', $slug)->exists()) {
             $slug = $originalSlug . '-' . $counter;
             $counter++;
         }
-        
+
         return $slug;
     }
 
@@ -427,72 +365,24 @@ class AdminArticleController extends Controller
     {
         // Strip HTML tags
         $text = strip_tags($content);
-        
+
         // Remove extra whitespace
         $text = preg_replace('/\s+/', ' ', trim($text));
-        
+
         // Trim to specified length
         if (strlen($text) > $length) {
             $text = substr($text, 0, $length);
-            
+
             // Find last complete word
             $lastSpace = strrpos($text, ' ');
             if ($lastSpace !== false) {
                 $text = substr($text, 0, $lastSpace);
             }
-            
+
             $text .= '...';
         }
-        
+
         return $text;
-    }
-
-    /**
-     * Attach categories to article (for new articles)
-     */
-    private function attachCategories(int $articleId, array $categoryIds): void
-    {
-        if (empty($categoryIds)) {
-            return;
-        }
-
-        // Insert into article_categories table
-        foreach ($categoryIds as $categoryId) {
-            // Skip if not numeric
-            if (!is_numeric($categoryId)) {
-                continue;
-            }
-
-            try {
-                // Use raw query to insert
-                $pdo = Article::getPdo();
-                $stmt = $pdo->prepare(
-                    "INSERT IGNORE INTO article_categories (article_id, category_id) VALUES (?, ?)"
-                );
-                $stmt->execute([$articleId, $categoryId]);
-            } catch (\Exception $e) {
-                error_log("Failed to attach category {$categoryId}: " . $e->getMessage());
-            }
-        }
-    }
-
-    /**
-     * Sync categories for existing article (removes old, adds new)
-     */
-    private function syncCategories(int $articleId, array $categoryIds): void
-    {
-        try {
-            $pdo = Article::getPdo();
-
-            // Remove existing categories
-            $stmt = $pdo->prepare("DELETE FROM article_categories WHERE article_id = ?");
-            $stmt->execute([$articleId]);
-
-            // Add new categories
-            $this->attachCategories($articleId, $categoryIds);
-        } catch (\Exception $e) {
-            error_log("Failed to sync categories: " . $e->getMessage());
-        }
     }
 
     /**
@@ -504,10 +394,10 @@ class AdminArticleController extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         // Get user ID from session
-        $userId = $_SESSION['user_id'] ?? null;
-        
+        $userId = $_SESSION['auth_user_id'] ?? $_SESSION['auth_user_id'] ?? null;
+
         return $userId ? (int) $userId : null;
     }
 }

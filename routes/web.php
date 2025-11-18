@@ -14,13 +14,14 @@ declare(strict_types=1);
 | Using the Route facade for clean, static route definitions.
 */
 
-use App\Controllers\AdminArticleController;
 use Plugs\Facades\Route;
 use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\AdminController;
 use App\Controllers\ArticleController;
+use App\Controllers\AdminArticleController;
 use App\Controllers\AdminSettingController;
+use App\Controllers\AdminCategoryController;
 
 
 // Route::get('/home', [HomeController::class, 'index']);
@@ -32,9 +33,10 @@ Route::group(['prefix' => '/', 'middleware' => []], function () {
     Route::get('home', [HomeController::class, 'index']);
 
     // Article Routes
-    Route::get('/articles', [ArticleController::class, 'index'])->name('articles');
-
-    Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])->name('article');
+    Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
+    Route::get('/articles/{slug}/{id}', [ArticleController::class, 'article'])
+        ->where(['id' => '[0-9]+', 'slug' => '[a-z0-9-]+'])
+        ->name('articles.show');
 });
 
 Route::group(['prefix' => '/', 'middleware' => ['guest']], function () {
@@ -46,9 +48,13 @@ Route::group(['prefix' => '/', 'middleware' => ['guest']], function () {
 
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/forgot-password', [AuthController::class, 'forgotPasswordForm'])->name('forgot-password');
 });
+
+// Move this outside the guest group
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->name('logout')
+    ->middleware(['auth']); // Add auth middleware
 
 // Admin Routes
 Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
@@ -57,13 +63,38 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::get('/dashboard', [AdminController::class, 'adminDashboard'])->name('admin.dashboard');
 
-    // Admin Articles
-    Route::get('/articles', [AdminArticleController::class, 'manage']);
-    Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle']);
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Categories
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/categories', [AdminCategoryController::class, 'manage'])
+        ->name('admin.categories.index');
+    Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])
+        ->name('admin.categories.create');
 
-    Route::post('/articles/create', [AdminArticleController::class, 'createArticle']);
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Articles
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/articles', [AdminArticleController::class, 'manage'])
+        ->name('admin.articles.index');
+    Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle'])
+        ->name('admin.articles.create');
+    Route::post('/articles/create', [AdminArticleController::class, 'createArticle'])
+        ->name('admin.articles.store');
     Route::post('/articles/save-draft', [AdminArticleController::class, 'saveDraft']);
     Route::post('/articles/upload-image', [AdminArticleController::class, 'uploadFeaturedImage']);
+
+    Route::get('/articles/edit/{id}', [AdminArticleController::class, 'edit'])
+        ->name('admin.articles.edit');
+    Route::put('/articles/update/{id}', [AdminArticleController::class, 'update'])
+        ->name('admin.articles.update');
+    Route::delete('/articles/delete/{id}', [AdminArticleController::class, 'destroy'])
+        ->name('admin.articles.destroy');
+    Route::patch('/articles/toggle-status/{id}', [AdminArticleController::class, 'toggleStatus'])
+        ->name('admin.articles.toggle-status');
 
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
