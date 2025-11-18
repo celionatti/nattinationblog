@@ -9,6 +9,7 @@
     <meta name="author" content="{{ $app_name }}">
     <meta name="keywords" content="@yield('meta_keywords', 'blog, articles, posts, ' . strtolower($app_name))">
     <link rel="shortcut icon" href="{{ asset('logo.png') }}" type="image/png">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ asset('assets/packages/bootstrap/css/bootstrap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/packages/bootstrap/css/bootstrap-icons.min.css') }}">
     <!-- Google Fonts -->

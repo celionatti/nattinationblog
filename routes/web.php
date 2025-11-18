@@ -61,6 +61,10 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     Route::get('/articles', [AdminArticleController::class, 'manage']);
     Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle']);
 
+    Route::post('/articles/create', [AdminArticleController::class, 'createArticle']);
+    Route::post('/articles/save-draft', [AdminArticleController::class, 'saveDraft']);
+    Route::post('/articles/upload-image', [AdminArticleController::class, 'uploadFeaturedImage']);
+
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
 });
