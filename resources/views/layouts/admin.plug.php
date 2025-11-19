@@ -1,3 +1,9 @@
+<?php
+
+use Plugs\Utils\FlashMessage;
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -18,6 +24,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('assets/css/plugs-flash.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}">
     @stack('styles')
 </head>
@@ -29,9 +36,10 @@
         <Adminheader />
 
         <!-- ========== DASHBOARD CONTENT ========== -->
-         <main class="dashboard-content">
-             @yield('content')
-         </main>
+        <main class="dashboard-content">
+            {{{ FlashMessage::render(['auto_dismiss' => false]) }}}
+            @yield('content')
+        </main>
 
     </div>
 

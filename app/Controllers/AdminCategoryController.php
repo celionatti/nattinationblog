@@ -16,6 +16,7 @@ use Exception;
 use App\Models\Category;
 use Plugs\Paginator\Paginator;
 use Plugs\Base\Controller\Controller;
+use Plugs\Utils\FlashMessage;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -95,6 +96,99 @@ class AdminCategoryController extends Controller
                 'paginator' => null,
                 'page_title' => 'Manage Categories'
             ]);
+        }
+    }
+
+    /**
+     * Handle bulk actions (POST)
+     */
+    public function bulkAction(Request $request): Response
+    {
+        try {
+            $body = $request->getParsedBody();
+            $action = $body['action'] ?? '';
+            $categoryIds = $body['category_ids'] ?? [];
+
+            if (empty($categoryIds) || !is_array($categoryIds)) {
+                // $_SESSION['error_message'] = 'No categories selected';
+                FlashMessage::error('No categories selected');
+                return $this->redirect('/admin/categories');
+            }
+
+            $count = 0;
+
+            switch ($action) {
+                case 'activate':
+                    foreach ($categoryIds as $id) {
+                        $category = Category::find($id);
+                        if ($category) {
+                            $category->is_active = true;
+                            $category->save();
+                            $count++;
+                        }
+                    }
+                    // $_SESSION['success_message'] = "Successfully activated {$count} " . ($count === 1 ? 'category' : 'categories');
+                    FlashMessage::success("Successfully activated {$count} " . ($count === 1 ? 'category' : 'categories'));
+                    break;
+
+                case 'archive':
+                    foreach ($categoryIds as $id) {
+                        $category = Category::find($id);
+                        if ($category) {
+                            $category->is_active = false;
+                            $category->save();
+                            $count++;
+                        }
+                    }
+                    // $_SESSION['success_message'] = "Successfully archived {$count} " . ($count === 1 ? 'category' : 'categories');
+                    FlashMessage::success("Successfully archived {$count} " . ($count === 1 ? 'category' : 'categories'));
+                    break;
+
+                case 'delete':
+                    $count = Category::destroyMany($categoryIds);
+                    $_SESSION['success_message'] = "Successfully deleted {$count} " . ($count === 1 ? 'category' : 'categories');
+                    FlashMessage::success("Successfully deleted {$count} " . ($count === 1 ? 'category' : 'categories'));
+                    break;
+
+                default:
+                    // $_SESSION['error_message'] = 'Invalid action';
+                    FlashMessage::error("Invalid action");
+                    break;
+            }
+
+            return $this->redirect('/admin/categories');
+        } catch (Exception $e) {
+            // $_SESSION['error_message'] = 'Bulk action failed: ' . $e->getMessage();
+            FlashMessage::error("Bulk action failed: " . $e->getMessage());
+            return $this->redirect('/admin/categories');
+        }
+    }
+
+    /**
+     * Delete single category (POST with DELETE method spoofing)
+     */
+    public function delete(Request $request, array $args): Response
+    {
+        try {
+            $id = (int)$args['id'];
+            $category = Category::find($id);
+
+            if (!$category) {
+                // $_SESSION['error_message'] = 'Category not found';
+                FlashMessage::error("Category not found");
+                return $this->redirect('/admin/categories/manage');
+            }
+
+            $categoryName = $category->name;
+            $category->delete();
+
+            // $_SESSION['success_message'] = "Category '{$categoryName}' deleted successfully";
+            FlashMessage::success("Category '{$categoryName}' deleted successfully");
+            return $this->redirect('/admin/categories/manage');
+        } catch (Exception $e) {
+            // $_SESSION['error_message'] = 'Failed to delete category: ' . $e->getMessage();
+            FlashMessage::error("Failed to delete category: " . $e->getMessage());
+            return $this->redirect('/admin/categories/manage');
         }
     }
 }

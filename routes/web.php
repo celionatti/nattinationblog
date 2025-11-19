@@ -68,10 +68,10 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     * Admin Categories
     * -------------------------------------------------------------------------------
     */
-    Route::get('/categories', [AdminCategoryController::class, 'manage'])
-        ->name('admin.categories.index');
-    Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])
-        ->name('admin.categories.create');
+    Route::get('/categories', [AdminCategoryController::class, 'manage'])->name('admin.categories.index');
+    Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])->name('admin.categories.create');
+    Route::post('/categories/bulk-action', [AdminCategoryController::class, 'bulkAction'])->name('admin.categories.bulk');
+    Route::post('/categories/delete/{id}', [AdminCategoryController::class, 'delete'])->name('admin.categories.delete');
 
     /*
     * -------------------------------------------------------------------------------

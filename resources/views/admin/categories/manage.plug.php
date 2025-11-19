@@ -41,7 +41,7 @@
         <div class="table-actions">
             <!-- Bulk Actions Button -->
             <div class="bulk-actions-container" id="bulkActionsContainer">
-                <button class="btn-custom btn-secondary" id="bulkActionsButton">
+                <button type="button" class="btn-custom btn-secondary" id="bulkActionsButton">
                     <i class="bi bi-three-dots"></i>
                     Bulk Actions
                     <span id="selectedCount" class="ms-1">(0)</span>
@@ -164,13 +164,14 @@
     const bulkActionsMenu = document.getElementById('bulkActionsMenu');
     const selectedCount = document.getElementById('selectedCount');
     const bulkActionsCount = document.getElementById('bulkActionsCount');
+    const bulkActionsForm = document.getElementById('bulkActionsForm');
+    const bulkActionType = document.getElementById('bulkActionType');
 
     function updateSelectedCount() {
         const checkedCount = Array.from(categoryCheckboxes).filter(cb => cb.checked).length;
         selectedCount.textContent = `(${checkedCount})`;
         bulkActionsCount.textContent = `${checkedCount} item${checkedCount !== 1 ? 's' : ''} selected`;
 
-        // Show/hide bulk actions container
         if (checkedCount > 0) {
             bulkActionsContainer.classList.add('show');
         } else {
@@ -183,13 +184,13 @@
         checkbox.addEventListener('change', updateSelectedCount);
     });
 
-    // ========== BULK ACTIONS MENU ==========
+    // Toggle bulk actions menu
     bulkActionsButton.addEventListener('click', function(e) {
         e.stopPropagation();
         bulkActionsMenu.style.display = bulkActionsMenu.style.display === 'block' ? 'none' : 'block';
     });
 
-    // Close bulk actions menu when clicking outside
+    // Close menu when clicking outside
     document.addEventListener('click', function() {
         bulkActionsMenu.style.display = 'none';
     });
@@ -205,66 +206,13 @@
                 return;
             }
 
-            let actionText;
-            switch (action) {
-                case 'activate':
-                    actionText = 'activate';
-                    break;
-                case 'archive':
-                    actionText = 'archive';
-                    break;
-                case 'delete':
-                    actionText = 'delete';
-                    break;
-                default:
-                    actionText = action;
+            let actionText = action;
+            let confirmMessage = `Are you sure you want to ${actionText} ${checkedItems.length} categor${checkedItems.length !== 1 ? 'ies' : 'y'}?`;
+
+            if (confirm(confirmMessage)) {
+                bulkActionType.value = action;
+                bulkActionsForm.submit();
             }
-
-            if (confirm(`Are you sure you want to ${actionText} ${checkedItems.length} categor${checkedItems.length !== 1 ? 'ies' : 'y'}?`)) {
-                console.log(`Performing ${action} on ${checkedItems.length} categories`);
-
-                // Close the menu
-                bulkActionsMenu.style.display = 'none';
-
-                // Show a success message
-                alert(`Successfully ${actionText}d ${checkedItems.length} categor${checkedItems.length !== 1 ? 'ies' : 'y'}`);
-
-                // Reset checkboxes
-                categoryCheckboxes.forEach(cb => cb.checked = false);
-                updateSelectedCount();
-            }
-        });
-    });
-
-    // ========== DELETE CATEGORIES ==========
-    document.querySelectorAll('.action-btn.delete').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const card = this.closest('.category-card');
-            const categoryName = card.querySelector('.category-title').textContent.trim();
-
-            if (confirm(`Are you sure you want to delete the category "${categoryName}"? This action cannot be undone.`)) {
-                // In a real application, this would delete from database
-                console.log('Category deleted:', categoryName);
-                card.style.opacity = '0.5';
-                setTimeout(() => {
-                    card.remove();
-                    // Check if we should show empty state
-                    if (document.querySelectorAll('.category-card').length === 1) { // Only add card remains
-                        document.getElementById('emptyState').style.display = 'block';
-                    }
-                }, 500);
-            }
-        });
-    });
-
-    // ========== FILTER FUNCTIONALITY ==========
-    const sortFilter = document.getElementById('sortFilter');
-    const statusFilter = document.getElementById('statusFilter');
-
-    [sortFilter, statusFilter].forEach(filter => {
-        filter.addEventListener('change', function() {
-            console.log('Filter changed:', this.id, this.value);
-            // In a real application, this would filter the categories
         });
     });
 </script>
