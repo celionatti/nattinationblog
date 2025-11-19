@@ -24,7 +24,6 @@ use Plugs\Utils\FlashMessage;
     <link
         href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/plugs-flash.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}">
     @stack('styles')
 </head>
@@ -37,7 +36,7 @@ use Plugs\Utils\FlashMessage;
 
         <!-- ========== DASHBOARD CONTENT ========== -->
         <main class="dashboard-content">
-            {{{ FlashMessage::render(['auto_dismiss' => false]) }}}
+            {{{ FlashMessage::render(['auto_dismiss' => true]) }}}
             @yield('content')
         </main>
 

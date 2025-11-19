@@ -99,6 +99,15 @@ class AdminCategoryController extends Controller
         }
     }
 
+    public function newCategory()
+    {
+        $data = [
+                'page_title' => 'Create New Category'
+            ];
+
+            return $this->view('admin.categories.create', $data);
+    }
+
     /**
      * Handle bulk actions (POST)
      */
@@ -176,7 +185,7 @@ class AdminCategoryController extends Controller
             if (!$category) {
                 // $_SESSION['error_message'] = 'Category not found';
                 FlashMessage::error("Category not found");
-                return $this->redirect('/admin/categories/manage');
+                return $this->redirect('/admin/categories');
             }
 
             $categoryName = $category->name;
@@ -184,11 +193,11 @@ class AdminCategoryController extends Controller
 
             // $_SESSION['success_message'] = "Category '{$categoryName}' deleted successfully";
             FlashMessage::success("Category '{$categoryName}' deleted successfully");
-            return $this->redirect('/admin/categories/manage');
+            return $this->redirect('/admin/categories');
         } catch (Exception $e) {
             // $_SESSION['error_message'] = 'Failed to delete category: ' . $e->getMessage();
             FlashMessage::error("Failed to delete category: " . $e->getMessage());
-            return $this->redirect('/admin/categories/manage');
+            return $this->redirect('/admin/categories');
         }
     }
 }

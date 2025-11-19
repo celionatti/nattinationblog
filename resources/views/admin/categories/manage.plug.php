@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', {{ $page_title ?? 'Admin Categories Management' }})
+@section('title', 'Admin Categories Management')
 
 @section('content')
 <h1 class="page-title">Categories Management</h1>
@@ -87,7 +87,7 @@
             <div class="category-header">
                 <input type="checkbox" class="category-checkbox" name="category_ids[]" value="{{ $category->id }}"
                     form="bulkActionsForm">
-                <div class="category-color" style="background-color: {{ $category->color ?? '#6c757d' }};"></div>
+                <div class="category-color" style="background-color: <?= $category->color ?? '#6c757d' ?>;"></div>
             </div>
             <div class="category-body">
                 <h3 class="category-title">
