@@ -24,10 +24,9 @@
             <div class="filter-group">
                 <label class="filter-label">Status</label>
                 <select class="filter-select" name="status" id="statusFilter" onchange="this.form.submit()">
-                    <option value="all" {{ ($status_filter ?? 'all' )==='all' ? 'selected' : '' }}>All Categories
-                    </option>
-                    <option value="1" {{ ($status_filter ?? '' )==='1' ? 'selected' : '' }}>Active</option>
-                    <option value="0" {{ ($status_filter ?? '' )==='0' ? 'selected' : '' }}>Archived</option>
+                    <option value="all" {{ ($status_filter ?? 'all') === 'all' ? 'selected' : '' }}>All Categories</option>
+                    <option value="1" {{ ($status_filter ?? '') === '1' ? 'selected' : '' }}>Active</option>
+                    <option value="0" {{ ($status_filter ?? '') === '0' ? 'selected' : '' }}>Archived</option>
                 </select>
             </div>
         </div>

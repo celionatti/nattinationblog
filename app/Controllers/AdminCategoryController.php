@@ -32,7 +32,7 @@ class AdminCategoryController extends Controller
             $queryParams = $request->getQueryParams();
             $sortBy = $queryParams['sort_by'] ?? 'name';
             $statusFilter = $queryParams['status'] ?? 'all';
-            $perPage = 2;
+            $perPage = 15;
             $currentPage = (int)($queryParams['page'] ?? 1);
 
             // Build query
@@ -40,9 +40,9 @@ class AdminCategoryController extends Controller
 
             // Apply status filter
             if ($statusFilter === '1') {
-                $query = $query->where('is_active', 1);
+                $query = $query->where('is_active', true);
             } elseif ($statusFilter === '0') {
-                $query = $query->where('is_active', 0);
+                $query = $query->where('is_active', false);
             }
 
             // Apply sorting
