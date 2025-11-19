@@ -69,9 +69,14 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     * -------------------------------------------------------------------------------
     */
     Route::get('/categories', [AdminCategoryController::class, 'manage'])->name('admin.categories.index');
-    Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])->name('admin.categories.create');
+
+    Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])->name('admin.categories.show');
+
+    Route::post('/categories/create', [AdminCategoryController::class, 'create'])->name('admin.categories.store');
+
     Route::post('/categories/bulk-action', [AdminCategoryController::class, 'bulkAction'])->name('admin.categories.bulk');
-    Route::post('/categories/delete/{id}', [AdminCategoryController::class, 'delete'])->name('admin.categories.delete');
+
+    Route::delete('/categories/delete/{id}', [AdminCategoryController::class, 'delete'])->name('admin.categories.delete');
 
     /*
     * -------------------------------------------------------------------------------

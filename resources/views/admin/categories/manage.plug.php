@@ -122,7 +122,7 @@
                         style="display: inline;"
                         onsubmit="return confirm('Are you sure you want to delete {{ $category->name }}?')">
                         @csrf
-                        <input type="hidden" name="_method" value="DELETE">
+                        @method('DELETE')
                         <button type="submit" class="action-btn delete w-100">
                             <i class="bi bi-trash"></i>
                             Delete

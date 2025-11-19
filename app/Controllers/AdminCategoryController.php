@@ -101,11 +101,18 @@ class AdminCategoryController extends Controller
 
     public function newCategory()
     {
-        $data = [
-                'page_title' => 'Create New Category'
-            ];
+        // Get parent categories for the dropdown
+        $parentCategories = Category::whereNull('parent_id')
+            ->orWhere('parent_id', 0)
+            ->orderBy('name', 'ASC')
+            ->get();
 
-            return $this->view('admin.categories.create', $data);
+        $data = [
+            'page_title' => 'Create New Category',
+            'parentCategories' => $parentCategories
+        ];
+
+        return $this->view('admin.categories.create', $data);
     }
 
     /**
@@ -176,10 +183,10 @@ class AdminCategoryController extends Controller
     /**
      * Delete single category (POST with DELETE method spoofing)
      */
-    public function delete(Request $request, array $args): Response
+    public function delete(Request $request, $id): Response
     {
         try {
-            $id = (int)$args['id'];
+            $id = (int)$id;
             $category = Category::find($id);
 
             if (!$category) {

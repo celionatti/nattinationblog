@@ -15,13 +15,13 @@
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="{{ url('admin/articles') }}" class="sidebar-nav-link {{ activeClass('/admin/articles', exact: true) }}">
+            <a href="{{ url('admin/articles') }}" class="sidebar-nav-link {{ activeClass('/admin/articles') }}">
                 <i class="bi bi-newspaper"></i>
                 Articles
             </a>
         </li>
         <li class="sidebar-nav-item">
-            <a href="{{ url('admin/categories') }}" class="sidebar-nav-link {{ activeClass('/admin/categories', exact: true) }}">
+            <a href="{{ url('admin/categories') }}" class="sidebar-nav-link {{ activeClass('/admin/categories') }}">
                 <i class="bi bi-folder"></i>
                 Categories
             </a>
