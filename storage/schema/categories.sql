@@ -6,6 +6,7 @@ CREATE TABLE `categories` (
     `description` TEXT NULL,
     `parent_id` BIGINT UNSIGNED NULL,
     `color` VARCHAR(7) NULL DEFAULT '#6c757d',
+    `icon` VARCHAR(50) NULL DEFAULT 'bi-folder',
     `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
     `sort_order` INT NOT NULL DEFAULT 0,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

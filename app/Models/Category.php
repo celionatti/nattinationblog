@@ -25,6 +25,7 @@ class Category extends PlugModel
         'description',
         'parent_id',
         'color',
+        'icon',
         'is_active',
         'sort_order'
     ];

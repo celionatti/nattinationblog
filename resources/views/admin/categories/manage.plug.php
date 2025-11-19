@@ -91,7 +91,7 @@
             </div>
             <div class="category-body">
                 <h3 class="category-title">
-                    <i class="bi {{ $category->icon_class ?? 'bi-folder' }}"></i>
+                    <i class="bi {{ $category->icon ?? 'bi-folder' }}"></i>
                     {{ $category->name }}
                 </h3>
                 <div class="category-slug">{{ $category->slug }}</div>

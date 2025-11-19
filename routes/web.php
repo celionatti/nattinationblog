@@ -72,7 +72,11 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::get('/categories/create', [AdminCategoryController::class, 'newCategory'])->name('admin.categories.show');
 
-    Route::post('/categories/create', [AdminCategoryController::class, 'create'])->name('admin.categories.store');
+    Route::post('/categories/create', [AdminCategoryController::class, 'store'])->name('admin.categories.store');
+
+    Route::get('/categories/edit/{id}', [AdminCategoryController::class, 'edit'])->name('admin.categories.edit');
+
+    Route::put('/categories/update/{id}', [AdminCategoryController::class, 'update'])->name('admin.categories.update');
 
     Route::post('/categories/bulk-action', [AdminCategoryController::class, 'bulkAction'])->name('admin.categories.bulk');
 
