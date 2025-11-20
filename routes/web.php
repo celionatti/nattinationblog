@@ -87,23 +87,11 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     * Admin Articles
     * -------------------------------------------------------------------------------
     */
-    Route::get('/articles', [AdminArticleController::class, 'manage'])
-        ->name('admin.articles.index');
-    Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle'])
-        ->name('admin.articles.create');
-    Route::post('/articles/create', [AdminArticleController::class, 'createArticle'])
-        ->name('admin.articles.store');
-    Route::post('/articles/save-draft', [AdminArticleController::class, 'saveDraft']);
-    Route::post('/articles/upload-image', [AdminArticleController::class, 'uploadFeaturedImage']);
-
-    Route::get('/articles/edit/{id}', [AdminArticleController::class, 'edit'])
-        ->name('admin.articles.edit');
-    Route::put('/articles/update/{id}', [AdminArticleController::class, 'update'])
-        ->name('admin.articles.update');
-    Route::delete('/articles/delete/{id}', [AdminArticleController::class, 'destroy'])
-        ->name('admin.articles.destroy');
-    Route::patch('/articles/toggle-status/{id}', [AdminArticleController::class, 'toggleStatus'])
-        ->name('admin.articles.toggle-status');
+    Route::get('/articles', [AdminArticleController::class, 'manage'])->name('admin.articles.index');
+    Route::post('/articles/bulk-action', [AdminArticleController::class, 'bulkAction'])->name('admin.articles.bulk');
+    Route::delete('/articles/delete/{id}', [AdminArticleController::class, 'destroy'])->name('admin.articles.destroy');
+    Route::patch('/articles/toggle-status/{id}', [AdminArticleController::class, 'toggleStatus'])->name('admin.articles.toggle-status');
+    Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle'])->name('admin.articles.create');
 
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');

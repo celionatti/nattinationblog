@@ -84,40 +84,8 @@
 <h1 class="page-title">Create New Post</h1>
 <p class="page-subtitle">Write and publish engaging content for your audience.</p>
 
-<?php
-// Get errors and old form data from session
-$errors = $_SESSION['form_errors'] ?? [];
-$oldData = $_SESSION['form_data'] ?? [];
-$successMessage = $_SESSION['success_message'] ?? null;
-
-// Clear session data after displaying
-if (!empty($errors)) {
-    unset($_SESSION['form_errors']);
-}
-if (!empty($oldData)) {
-    unset($_SESSION['form_data']);
-}
-if ($successMessage) {
-    unset($_SESSION['success_message']);
-}
-?>
-
-<!-- Success Message -->
-<?php if ($successMessage): ?>
-<div class="success-message">
-    <?= htmlspecialchars($successMessage) ?>
-</div>
-<?php endif; ?>
-
-<!-- General Error Message -->
-<?php if (!empty($errors['general'])): ?>
-<div class="general-error">
-    <strong>Error:</strong> <?= htmlspecialchars($errors['general']) ?>
-</div>
-<?php endif; ?>
-
 <!-- Form for PHP handling -->
-<form action="{{ route('admin.articles.store') }}" method="POST" enctype="multipart/form-data" id="postForm">
+<form action="" method="POST" enctype="multipart/form-data" id="postForm">
     @csrf
     
     <!-- Hidden field to determine action -->
@@ -131,17 +99,14 @@ if ($successMessage) {
                 <div class="editor-card-body title-container">
                     <div class="form-group" style="width: 100%;">
                         <textarea 
-                            class="form-control title-input <?= !empty($errors['title']) ? 'is-invalid' : '' ?>" 
+                            class="form-control title-input" 
                             name="title" 
                             id="postTitle" 
                             placeholder="Add title"
                             rows="1" 
                             autocomplete="off" 
                             style="height: auto;"
-                        ><?= htmlspecialchars($oldData['title'] ?? '') ?></textarea>
-                        <?php if (!empty($errors['title'])): ?>
-                            <span class="error-message"><?= htmlspecialchars($errors['title']) ?></span>
-                        <?php endif; ?>
+                        ></textarea>
                     </div>
                 </div>
             </div>
@@ -155,9 +120,9 @@ if ($successMessage) {
                             name="content" 
                             class="form-control <?= !empty($errors['content']) ? 'is-invalid' : '' ?>"
                         ><?= htmlspecialchars($oldData['content'] ?? '') ?></textarea>
-                        <?php if (!empty($errors['content'])): ?>
-                            <span class="error-message"><?= htmlspecialchars($errors['content']) ?></span>
-                        <?php endif; ?>
+                        @error('content')
+                        {{ $message }}
+                        @enderror
                     </div>
                 </div>
             </div>

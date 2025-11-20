@@ -114,7 +114,7 @@
         </form>
     </div>
     <div class="form-actions p-3 gap-3">
-        <a href="{{ route('admin.categories.index') }}" class="btn-custom btn-secondary" id="cancelButton">
+        <a href="{{ route('admin.categories.index') }}" class="btn-custom btn-secondary text-decoration-none" id="cancelButton">
             <i class="bi bi-x-lg"></i>
             Cancel
         </a>
@@ -132,7 +132,7 @@
     </div>
     <div class="preview-card-body">
         <div class="category-preview">
-            <div class="category-preview-color" id="previewColor" style="background-color: {{ old('color', $category->color ?: '#667eea') }}"></div>
+            <div class="category-preview-color" id="previewColor" style="background-color: <?= old('color', $category->color ?: '#667eea') ?>"></div>
             <div class="category-preview-info">
                 <div class="category-preview-name" id="previewName">{{ old('name', $category->name) }}</div>
                 <div class="category-preview-slug" id="previewSlug">{{ old('slug', $category->slug) }}</div>

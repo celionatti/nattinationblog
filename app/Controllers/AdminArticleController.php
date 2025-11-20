@@ -13,8 +13,11 @@ namespace App\Controllers;
 */
 
 use Exception;
+use App\Models\User;
 use App\Models\Article;
 use App\Models\Category;
+use Plugs\Utils\FlashMessage;
+use Plugs\Paginator\Paginator;
 use Plugs\Upload\FileUploader;
 use Plugs\Upload\UploadedFile;
 use App\Models\ArticleRevision;
@@ -27,25 +30,86 @@ class AdminArticleController extends Controller
     /**
      * Display article management page
      */
-    public function manage(): Response
+    public function manage(Request $request): Response
     {
         try {
-            // Get all articles with author info
-            $articles = Article::with('author')
-                ->latest('created_at')
-                ->paginate(15);
+            // Get query parameters
+            $queryParams = $request->getQueryParams();
+            $statusFilter = $queryParams['status'] ?? 'all';
+            $authorFilter = $queryParams['author'] ?? 'all';
+            $dateFilter = $queryParams['date'] ?? 'all';
+            $perPage = 15;
+            $currentPage = (int)($queryParams['page'] ?? 1);
+
+            // Build query - get all articles first
+            $articles = Article::with(['author']);
+
+            // Apply status filter
+            if ($statusFilter !== 'all') {
+                $articles = $articles->where('status', $statusFilter);
+            }
+
+            // Apply author filter
+            if ($authorFilter !== 'all') {
+                $articles = $articles->where('author_id', $authorFilter);
+            }
+
+            // Apply date filter
+            if ($dateFilter !== 'all') {
+                $now = date('Y-m-d H:i:s');
+                switch ($dateFilter) {
+                    case 'today':
+                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00'));
+                        break;
+                    case 'week':
+                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 week')));
+                        break;
+                    case 'month':
+                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 month')));
+                        break;
+                }
+            }
+
+            // Apply sorting
+            $articles = $articles->latest('created_at');
+
+            // Create paginator
+            $paginator = Paginator::fromQuery($articles, $perPage, $currentPage);
+
+            // Get paginated articles
+            $articles = $paginator->items();
+
+            // Get categories and authors for filters
+            $categories = Category::where('is_active', true)
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            $authors = User::all(); // Get all users for now
 
             $data = [
                 'articles' => $articles,
+                'categories' => $categories,
+                'authors' => $authors,
+                'paginator' => $paginator,
+                'status_filter' => $statusFilter,
+                'author_filter' => $authorFilter,
+                'date_filter' => $dateFilter,
                 'page_title' => 'Manage Articles'
             ];
 
             return $this->view('admin.articles.manage', $data);
         } catch (Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Failed to load articles: ' . $e->getMessage()
-            ], 500);
+            FlashMessage::error('Failed to load articles: ' . $e->getMessage());
+            return $this->view('admin.articles.manage', [
+                'articles' => [],
+                'categories' => [],
+                'authors' => [],
+                'paginator' => null,
+                'status_filter' => 'all',
+                'author_filter' => 'all',
+                'date_filter' => 'all',
+                'page_title' => 'Manage Articles'
+            ]);
         }
     }
 
@@ -73,169 +137,6 @@ class AdminArticleController extends Controller
                 'message' => 'Failed to load page: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Create and publish article
-     */
-    public function createArticle(Request $request): Response
-    {
-        try {
-            // Get form data
-            $data = $request->getParsedBody();
-
-            // Get current user ID
-            $userId = $this->getCurrentUserId($request);
-
-            if (!$userId) {
-                // Redirect to login if not authenticated
-                return $this->redirect('/admin/login');
-            }
-
-            // Determine if publishing or saving as draft
-            $isPublishing = isset($data['publish']) ||
-                (isset($data['action']) && $data['action'] === 'publish');
-
-            // Validate article data
-            $errors = $this->validateArticleData($data, $isPublishing);
-
-            if (!empty($errors)) {
-                // Store errors in session and redirect back
-                $_SESSION['form_errors'] = $errors;
-                $_SESSION['form_data'] = $data;
-                return $this->redirect('/admin/articles/create');
-            }
-
-            // Start transaction
-            Article::beginTransaction();
-
-            // Handle featured image upload
-            $featuredImagePath = null;
-            if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
-                try {
-                    $featuredImagePath = $this->handleFeaturedImageUpload($_FILES['featured_image']);
-                } catch (Exception $e) {
-                    Article::rollBack();
-
-                    $_SESSION['form_errors'] = ['featured_image' => $e->getMessage()];
-                    $_SESSION['form_data'] = $data;
-                    return $this->redirect('/admin/articles/create');
-                }
-            }
-
-            // Generate slug from title
-            $slug = $this->generateSlug($data['title']);
-
-            // Auto-generate excerpt if not provided
-            $excerpt = !empty($data['excerpt'])
-                ? $data['excerpt']
-                : $this->generateExcerpt($data['content']);
-
-            // Prepare article data
-            $articleData = [
-                'title' => $data['title'],
-                'slug' => $slug,
-                'content' => $data['content'],
-                'excerpt' => $excerpt,
-                'author_id' => $userId,
-                'category_id' => $data['categories'] ?? null,
-                'featured_image' => $featuredImagePath,
-                'status' => $isPublishing ? 'published' : 'draft',
-                'published_at' => $isPublishing ? date('Y-m-d H:i:s') : null,
-
-                // SEO fields
-                'seo_title' => $data['seo_title'] ?? null,
-                'seo_description' => $data['seo_description'] ?? null,
-                'seo_keywords' => $data['seo_keywords'] ?? null,
-            ];
-
-            // Create article
-            $article = Article::create($articleData);
-
-            if (!$article) {
-                throw new Exception('Failed to create article');
-            }
-
-            // Create initial revision
-            $this->createRevision(
-                $article,
-                $userId,
-                $isPublishing ? 'Initial publication' : 'Initial draft'
-            );
-
-            // Commit transaction
-            Article::commit();
-
-            // Clear form data from session
-            unset($_SESSION['form_errors'], $_SESSION['form_data']);
-
-            // Set success message
-            $_SESSION['success_message'] = $isPublishing
-                ? 'Article published successfully!'
-                : 'Article saved as draft.';
-
-            // Redirect to article edit page or list
-            return $this->redirect('/admin/articles/' . $article->id . '/edit');
-
-        } catch (Exception $e) {
-            // Rollback transaction
-            if (Article::transactionLevel() > 0) {
-                Article::rollBack();
-            }
-
-            // Delete uploaded image if article creation failed
-            if (isset($featuredImagePath) && file_exists($featuredImagePath)) {
-                @unlink($featuredImagePath);
-            }
-
-            // Log error
-            error_log('Article creation failed: ' . $e->getMessage());
-
-            // Store error and redirect back
-            $_SESSION['form_errors'] = ['general' => 'Failed to create article: ' . $e->getMessage()];
-            $_SESSION['form_data'] = $data ?? [];
-
-            return $this->redirect('/admin/articles/create');
-        }
-    }
-
-    /**
-     * Handle featured image upload
-     */
-    private function handleFeaturedImageUpload(array $fileData): string
-    {
-        // Define upload path
-        $uploadPath = defined('BASE_PATH')
-            ? BASE_PATH . '/uploads/articles/featured'
-            : dirname(__DIR__, 2) . '/uploads/articles/featured';
-
-        // Create uploader instance
-        $uploader = new FileUploader($uploadPath);
-
-        // Configure for images only
-        $uploader->imagesOnly(5 * 1024 * 1024) // 5MB max
-            ->setImageDimensions(
-                maxWidth: 2000,
-                maxHeight: 2000,
-                minWidth: 400,
-                minHeight: 300
-            )
-            ->generateUniqueName(true)
-            ->organizeByDate(true)
-            ->preventDuplicates(false)
-            ->allowSvg(false); // Disable SVG for security
-
-        // Create UploadedFile instance
-        $file = new UploadedFile($fileData);
-
-        // Get user identifier for rate limiting
-        $userIdentifier = $_SESSION['auth_user_id'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-
-        // Upload file
-        $result = $uploader->upload($file, null);
-
-        // Return the relative path (for storage in database)
-        return $result['relative_path'];
     }
 
     /**

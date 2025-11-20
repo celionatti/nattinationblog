@@ -8,53 +8,47 @@
 
 <!-- ========== POSTS CONTROLS ========== -->
 <div class="posts-controls">
-    <div class="filters-container">
-        <div class="filter-group">
-            <label class="filter-label">Status</label>
-            <select class="filter-select" id="statusFilter">
-                <option value="all">All Status</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
-                <option value="archived">Archived</option>
-            </select>
+    <form action="{{ route('admin.articles.index') }}" method="get" id="filterForm">
+        <div class="filters-container">
+            <div class="filter-group">
+                <label class="filter-label">Status</label>
+                <select class="filter-select" name="status" id="statusFilter" onchange="this.form.submit()">
+                    <option value="all" {{ ($status_filter ?? 'all') === 'all' ? 'selected' : '' }}>All Status</option>
+                    <option value="published" {{ ($status_filter ?? '') === 'published' ? 'selected' : '' }}>Published</option>
+                    <option value="draft" {{ ($status_filter ?? '') === 'draft' ? 'selected' : '' }}>Draft</option>
+                    <option value="archived" {{ ($status_filter ?? '') === 'archived' ? 'selected' : '' }}>Archived</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Author</label>
+                <select class="filter-select" name="author" id="authorFilter" onchange="this.form.submit()">
+                    <option value="all" {{ ($author_filter ?? 'all') === 'all' ? 'selected' : '' }}>All Authors</option>
+                    @foreach($authors as $author)
+                    <option value="{{ $author->id }}"
+                        {{ ($author_filter ?? '') == $author->id ? 'selected' : '' }}>
+                        {{ $author->name }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Date</label>
+                <select class="filter-select" name="date" id="dateFilter" onchange="this.form.submit()">
+                    <option value="all" {{ ($date_filter ?? 'all') === 'all' ? 'selected' : '' }}>All Time</option>
+                    <option value="today" {{ ($date_filter ?? '') === 'today' ? 'selected' : '' }}>Today</option>
+                    <option value="week" {{ ($date_filter ?? '') === 'week' ? 'selected' : '' }}>This Week</option>
+                    <option value="month" {{ ($date_filter ?? '') === 'month' ? 'selected' : '' }}>This Month</option>
+                </select>
+            </div>
         </div>
-        <div class="filter-group">
-            <label class="filter-label">Category</label>
-            <select class="filter-select" id="categoryFilter">
-                <option value="all">All Categories</option>
-                <option value="world">World</option>
-                <option value="technology">Technology</option>
-                <option value="sports">Sports</option>
-                <option value="travel">Travel</option>
-                <option value="politics">Politics</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label class="filter-label">Author</label>
-            <select class="filter-select" id="authorFilter">
-                <option value="all">All Authors</option>
-                <option value="john">John Doe</option>
-                <option value="sarah">Sarah Adams</option>
-                <option value="mike">Mike Johnson</option>
-                <option value="emily">Emily Chen</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label class="filter-label">Date</label>
-            <select class="filter-select" id="dateFilter">
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-            </select>
-        </div>
-    </div>
+        <!-- Preserve page parameter -->
+        <input type="hidden" name="page" value="{{ $_GET['page'] ?? 1 }}">
+    </form>
 
-    <a href="{{ url('admin/articles/new-article') }}" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
+    <button type="button" onclick="window.location.href='/admin/articles/new-article'" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
         <i class="bi bi-plus-lg"></i>
         New Post
-    </a>
+    </button>
 </div>
 
 <!-- ========== DATA TABLE ========== -->
@@ -94,10 +88,6 @@
                             <i class="bi bi-archive"></i>
                             Archive
                         </li>
-                        <li class="bulk-action-item" data-action="duplicate">
-                            <i class="bi bi-copy"></i>
-                            Duplicate
-                        </li>
                         <li class="bulk-action-item danger" data-action="delete">
                             <i class="bi bi-trash"></i>
                             Delete
@@ -109,319 +99,137 @@
     </div>
 
     <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>
-                        <input type="checkbox" class="table-checkbox" id="selectAll">
-                    </th>
-                    <th>Post</th>
-                    <th>Author</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Views</th>
-                    <th>Comments</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">Breaking: Major Development Reshapes Global
-                                    Economy</div>
-                                <div class="post-excerpt">In a stunning turn of events that has sent shockwaves through
-                                    financial markets worldwide...</div>
-                                <div class="post-category">Featured Article</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">JD</div>
-                            <span>John Doe</span>
-                        </div>
-                    </td>
-                    <td>World</td>
-                    <td>
-                        <span class="status-badge status-published">Published</span>
-                    </td>
-                    <td>2,548</td>
-                    <td>45</td>
-                    <td>2 hours ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">AI Revolution: New Breakthrough Changes
-                                    Everything</div>
-                                <div class="post-excerpt">Artificial intelligence has reached a new milestone with the
-                                    development of...</div>
-                                <div class="post-category">Technology News</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">SA</div>
-                            <span>Sarah Adams</span>
-                        </div>
-                    </td>
-                    <td>Technology</td>
-                    <td>
-                        <span class="status-badge status-published">Published</span>
-                    </td>
-                    <td>3,892</td>
-                    <td>67</td>
-                    <td>4 hours ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">Champions League: Stunning Upset Shocks Fans
+        <?php if ($articles): ?>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" class="table-checkbox" id="selectAll">
+                        </th>
+                        <th>Post</th>
+                        <th>Author</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Comments</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($articles as $article)
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="table-checkbox" name="article_ids[]" value="{{ $article->id }}" form="bulkActionsForm">
+                        </td>
+                        <td>
+                            <div class="post-info">
+                                @if($article->featured_image)
+                                <img src="{{ $article->featured_image }}" alt="{{ $article->title }}" class="post-thumbnail">
+                                @else
+                                <div class="post-thumbnail placeholder">
+                                    <i class="bi bi-image"></i>
                                 </div>
-                                <div class="post-excerpt">Underdogs triumph in a spectacular match that will be
-                                    remembered for years to come...</div>
-                                <div class="post-category">Sports Update</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">MJ</div>
-                            <span>Mike Johnson</span>
-                        </div>
-                    </td>
-                    <td>Sports</td>
-                    <td>
-                        <span class="status-badge status-draft">Draft</span>
-                    </td>
-                    <td>1,245</td>
-                    <td>23</td>
-                    <td>6 hours ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1495020689067-958852a7765e?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">Climate Summit Reaches Historic Agreement</div>
-                                <div class="post-excerpt">World leaders unite on ambitious climate targets that could
-                                    reshape global policies...</div>
-                                <div class="post-category">World News</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">EC</div>
-                            <span>Emily Chen</span>
-                        </div>
-                    </td>
-                    <td>World</td>
-                    <td>
-                        <span class="status-badge status-pending">Pending</span>
-                    </td>
-                    <td>876</td>
-                    <td>12</td>
-                    <td>8 hours ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">10 Hidden Gems You Must Visit in 2025</div>
-                                <div class="post-excerpt">Discover these breathtaking destinations before they become
-                                    mainstream tourist spots...</div>
-                                <div class="post-category">Travel Guide</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">LM</div>
-                            <span>Lisa Martinez</span>
-                        </div>
-                    </td>
-                    <td>Travel</td>
-                    <td>
-                        <span class="status-badge status-published">Published</span>
-                    </td>
-                    <td>4,521</td>
-                    <td>89</td>
-                    <td>1 day ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <input type="checkbox" class="table-checkbox">
-                    </td>
-                    <td>
-                        <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
-                            <div class="post-details">
-                                <div class="post-title-text">Quantum Computing Makes Giant Leap Forward
+                                @endif
+                                <div class="post-details">
+                                    <div class="post-title-text">{{ $article->title }}</div>
+                                    <div class="post-excerpt">{{ $article->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($article->content), 100) }}</div>
+                                    <div class="post-category">Featured Article</div>
+                                    <div class="post-slug">{{ $article->slug }}</div>
                                 </div>
-                                <div class="post-excerpt">Scientists achieve breakthrough that brings practical quantum
-                                    computing closer to reality...</div>
-                                <div class="post-category">Tech Innovation</div>
                             </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="author-info">
-                            <div class="author-avatar">DW</div>
-                            <span>David Wilson</span>
-                        </div>
-                    </td>
-                    <td>Technology</td>
-                    <td>
-                        <span class="status-badge status-archived">Archived</span>
-                    </td>
-                    <td>5,234</td>
-                    <td>102</td>
-                    <td>1 day ago</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="action-btn view" title="View">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button class="action-btn delete" title="Delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                        </td>
+                        <td>
+                            <div class="author-info">
+                                <div class="author-avatar">{{ substr($article->author->name ?? 'Unknown', 0, 2) }}</div>
+                                <span>{{ $article->author->name ?? 'Unknown' }}</span>
+                            </div>
+                        </td>
+                        <td>World</td>
+                        <td>
+                            @php
+                            $statusClass = [
+                            'published' => 'status-published',
+                            'draft' => 'status-draft',
+                            'archived' => 'status-archived'
+                            ][$article->status] ?? 'status-draft';
+                            @endphp
+                            <span class="status-badge {{ $statusClass }}">{{ ucfirst($article->status) }}</span>
+                        </td>
+                        <td>{{ number_format($article->view_count ?? 0) }}</td>
+                        <td>{{ number_format($article->comment_count ?? 0) }}</td>
+                        <td>
+                            @if($article->published_at)
+                            {{ $article->published_at->diffForHumans() }}
+                            @else
+                            {{ $article->created_at->diffForHumans() }}
+                            @endif
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ route('admin.articles.edit', ['id' => $article->id]) }}" class="action-btn edit" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{{ route('articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <form method="POST" action="{{ route('admin.articles.toggle-status', ['id' => $article->id]) }}" style="display: inline;">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="action-btn status" title="{{ $article->status === 'published' ? 'Unpublish' : 'Publish' }}">
+                                        <i class="bi bi-{{ $article->status === 'published' ? 'eye-slash' : 'eye' }}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.articles.destroy', ['id' => $article->id]) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this article?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="action-btn delete" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        <?php else: ?>
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <h3 class="empty-state-title">No Articles Found</h3>
+                <p>No articles match your current filters. Try adjusting your search criteria or create a new article.</p>
+                <div class="empty-state-actions">
+                    <button type="button" onclick="window.location.href='/admin/articles/new-article'" class="btn-custom btn-primary">
+                        <i class="bi bi-plus-lg"></i>
+                        Create Article
+                    </button>
+                    <button type="button" onclick="window.location.href='/admin/articles'" class="btn-custom btn-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 
-    <div class="table-footer">
-        <div class="showing-info">
-            Showing <strong>1-6</strong> of <strong>1,247</strong> posts
-        </div>
-        <ul class="pagination">
-            <li>
-                <button disabled>
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-            </li>
-            <li><button class="active">1</button></li>
-            <li><button>2</button></li>
-            <li><button>3</button></li>
-            <li><button>4</button></li>
-            <li><button>5</button></li>
-            <li><button>...</button></li>
-            <li><button>208</button></li>
-            <li>
-                <button>
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </li>
-        </ul>
-    </div>
+    <?php if (isset($paginator) && $paginator && $paginator->hasPages()): ?>
+        {{{ $paginator->render() }}}
+    <?php endif; ?>
 </div>
+
+<!-- Bulk Actions Form -->
+<form action="{{ route('admin.articles.bulk') }}" method="post" id="bulkActionsForm">
+    @csrf
+    <input type="hidden" name="action" id="bulkActionType" value="">
+</form>
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         // ========== SELECT ALL CHECKBOXES ==========
         const selectAllCheckbox = document.getElementById('selectAll');
         const tableCheckboxes = document.querySelectorAll('.data-table tbody .table-checkbox');
@@ -430,6 +238,8 @@
         const bulkActionsMenu = document.getElementById('bulkActionsMenu');
         const selectedCount = document.getElementById('selectedCount');
         const bulkActionsCount = document.getElementById('bulkActionsCount');
+        const bulkActionType = document.getElementById('bulkActionType');
+        const bulkActionsForm = document.getElementById('bulkActionsForm');
 
         function updateSelectedCount() {
             const checkedCount = Array.from(tableCheckboxes).filter(cb => cb.checked).length;
@@ -445,42 +255,50 @@
             }
         }
 
-        selectAllCheckbox.addEventListener('change', function () {
-            tableCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                tableCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateSelectedCount();
             });
-            updateSelectedCount();
-        });
+        }
 
         tableCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function () {
+            checkbox.addEventListener('change', function() {
                 const allChecked = Array.from(tableCheckboxes).every(cb => cb.checked);
                 const someChecked = Array.from(tableCheckboxes).some(cb => cb.checked);
-                selectAllCheckbox.checked = allChecked;
-                selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
                 updateSelectedCount();
             });
         });
 
         // ========== BULK ACTIONS MENU ==========
-        bulkActionsButton.addEventListener('click', function (e) {
-            e.stopPropagation();
-            bulkActionsMenu.style.display = bulkActionsMenu.style.display === 'block' ? 'none' : 'block';
-        });
+        if (bulkActionsButton) {
+            bulkActionsButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                bulkActionsMenu.style.display = bulkActionsMenu.style.display === 'block' ? 'none' : 'block';
+            });
+        }
 
         // Close bulk actions menu when clicking outside
-        document.addEventListener('click', function () {
-            bulkActionsMenu.style.display = 'none';
+        document.addEventListener('click', function() {
+            if (bulkActionsMenu) {
+                bulkActionsMenu.style.display = 'none';
+            }
         });
 
         // Handle bulk action selection
         document.querySelectorAll('.bulk-action-item').forEach(item => {
-            item.addEventListener('click', function () {
+            item.addEventListener('click', function() {
                 const action = this.getAttribute('data-action');
                 const checkedItems = Array.from(tableCheckboxes).filter(cb => cb.checked);
 
                 if (checkedItems.length === 0) {
-                    alert('Please select at least one item.');
+                    alert('Please select at least one article.');
                     return;
                 }
 
@@ -495,9 +313,6 @@
                     case 'archive':
                         actionText = 'archive';
                         break;
-                    case 'duplicate':
-                        actionText = 'duplicate';
-                        break;
                     case 'delete':
                         actionText = 'delete';
                         break;
@@ -505,96 +320,25 @@
                         actionText = action;
                 }
 
-                if (confirm(`Are you sure you want to ${actionText} ${checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}?`)) {
-                    console.log(`Performing ${action} on ${checkedItems.length} items`);
-                    // Here you would typically make an API call to perform the action
-
-                    // Close the menu
-                    bulkActionsMenu.style.display = 'none';
-
-                    // Show a success message
-                    alert(`Successfully ${actionText}ed ${checkedItems.length} item${checkedItems.length !== 1 ? 's' : ''}`);
-
-                    // Reset checkboxes
-                    tableCheckboxes.forEach(cb => cb.checked = false);
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = false;
-                    updateSelectedCount();
+                if (confirm(`Are you sure you want to ${actionText} ${checkedItems.length} article${checkedItems.length !== 1 ? 's' : ''}?`)) {
+                    bulkActionType.value = action;
+                    bulkActionsForm.submit();
                 }
             });
         });
 
         // ========== FILTER FUNCTIONALITY ==========
         const statusFilter = document.getElementById('statusFilter');
-        const categoryFilter = document.getElementById('categoryFilter');
         const authorFilter = document.getElementById('authorFilter');
         const dateFilter = document.getElementById('dateFilter');
 
-        [statusFilter, categoryFilter, authorFilter, dateFilter].forEach(filter => {
-            filter.addEventListener('change', function () {
-                console.log('Filter changed:', this.id, this.value);
-                // In a real application, you would filter the table data here
-            });
-        });
-
-        // ========== NEW POST BUTTON ==========
-        const newPostBtn = document.getElementById('newPostBtn');
-        newPostBtn.addEventListener('click', function () {
-            console.log('Create new post');
-            // In a real application, you would navigate to the post editor
-        });
-
-        // ========== ACTION BUTTONS ==========
-        document.querySelectorAll('.action-btn.edit').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                console.log('Edit post');
-            });
-        });
-
-        document.querySelectorAll('.action-btn.view').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                console.log('View post');
-            });
-        });
-
-        document.querySelectorAll('.action-btn.delete').forEach(btn => {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                if (confirm('Are you sure you want to delete this post?')) {
-                    console.log('Delete post');
-                }
-            });
-        });
-
-        // ========== TABLE ROW CLICK ==========
-        document.querySelectorAll(".data-table tbody tr").forEach((row) => {
-            row.addEventListener("click", function (e) {
-                if (
-                    !e.target.closest(".table-checkbox") &&
-                    !e.target.closest(".action-btn")
-                ) {
-                    console.log("View post details");
-                }
-            });
-        });
-
-        // ========== PAGINATION ==========
-        document.querySelectorAll(".pagination button").forEach((button, index) => {
-            if (!button.disabled && button.textContent.trim() !== "...") {
-                button.addEventListener("click", function () {
-                    document.querySelectorAll(".pagination button").forEach((btn) => {
-                        btn.classList.remove("active");
-                    });
-                    if (!this.querySelector("i")) {
-                        this.classList.add("active");
-                    }
-                    console.log("Navigate to page:", this.textContent);
+        [statusFilter, authorFilter, dateFilter].forEach(filter => {
+            if (filter) {
+                filter.addEventListener('change', function() {
+                    document.getElementById('filterForm').submit();
                 });
             }
         });
-        // End....
     });
 </script>
 @endpush
