@@ -32,8 +32,9 @@ class AdminArticleController extends Controller
 
     public function onConstruct()
     {
-        $this->uploader = new FileUploader("uploads/articles");
-        $this->uploader->imagesOnly(5 * 1024 * 1024);
+        $this->uploader = new FileUploader();
+        $this->uploader->usePublicFolder("uploads/articles");
+        $this->uploader->imagesOnly(5 * 1024 * 1024)->setImageDimensions(maxWidth: 2000, maxHeight: 2000);
         $this->uploader->disableSecurityFiles();
     }
     /**
@@ -173,7 +174,7 @@ class AdminArticleController extends Controller
             $featuredImage = null;
 
             if(isset($_FILES['featured_image'])) {
-                $file = new UploadedFile($_FILES['featured_image']);
+                $file = UploadedFile::createFromFilesArray($_FILES['featured_image']);
                 try {
                     $featuredImage = $this->uploader->upload($file, null, (string)$userId);
                 } catch(Exception $e) {
