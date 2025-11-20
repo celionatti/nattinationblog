@@ -88,10 +88,16 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     * -------------------------------------------------------------------------------
     */
     Route::get('/articles', [AdminArticleController::class, 'manage'])->name('admin.articles.index');
+
     Route::post('/articles/bulk-action', [AdminArticleController::class, 'bulkAction'])->name('admin.articles.bulk');
+
     Route::delete('/articles/delete/{id}', [AdminArticleController::class, 'destroy'])->name('admin.articles.destroy');
+
     Route::patch('/articles/toggle-status/{id}', [AdminArticleController::class, 'toggleStatus'])->name('admin.articles.toggle-status');
+
     Route::get('/articles/new-article', [AdminArticleController::class, 'newArticle'])->name('admin.articles.create');
+
+    Route::post('/articles/create', [AdminArticleController::class, 'store'])->name('admin.articles.store');
 
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');

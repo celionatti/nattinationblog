@@ -22,11 +22,20 @@ use Plugs\Upload\FileUploader;
 use Plugs\Upload\UploadedFile;
 use App\Models\ArticleRevision;
 use Plugs\Base\Controller\Controller;
+use Plugs\View\ErrorMessage;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AdminArticleController extends Controller
 {
+    private $uploader;
+
+    public function onConstruct()
+    {
+        $this->uploader = new FileUploader("uploads/articles");
+        $this->uploader->imagesOnly(5 * 1024 * 1024);
+        $this->uploader->disableSecurityFiles();
+    }
     /**
      * Display article management page
      */
@@ -139,6 +148,129 @@ class AdminArticleController extends Controller
         }
     }
 
+    public function store(Request $request)
+    {
+        try {
+            $data = $request->getParsedBody();
+
+            $isPublish = $data['action'] === 'publish' ? true : false;
+
+            $errors = $this->validateArticleData($request, $isPublish);
+
+            // If validation fails, redirect back with errors
+            if ($errors->any()) {
+                return $this->back($errors);
+            }
+
+            // Get current user ID (you might need to adjust this based on your auth system)
+            $userId = $this->getCurrentUserId($request);
+            if (!$userId) {
+                FlashMessage::error('You must be logged in to create an article.');
+                return $this->redirect('/admin/articles/new-article');
+            }
+
+            // Handle featured image upload
+            $featuredImage = null;
+
+            if(isset($_FILES['featured_image'])) {
+                $file = new UploadedFile($_FILES['featured_image']);
+                try {
+                    $featuredImage = $this->uploader->upload($file, null, (string)$userId);
+                } catch(Exception $e) {
+                    FlashMessage::error("Upload failed: " . $e->getMessage());
+                    return $this->redirect("/admin/articles/new-article");
+                }
+            }
+
+            // Generate slug from title
+            $slug = $this->generateSlug($data['title']);
+
+            // Generate excerpt if not provided
+            $excerpt = $body['excerpt'] ?? $this->generateExcerpt($data['content']);
+
+            // Determine published_at date
+            $publishedAt = null;
+            if (isset($data['action']) && $data['action'] === 'publish') {
+                $publishedAt = date('Y-m-d H:i:s');
+                
+                // If scheduled publishing is implemented later:
+                // if (isset($body['publish_at']) && !empty($body['publish_at'])) {
+                //     $publishedAt = date('Y-m-d H:i:s', strtotime($body['publish_at']));
+                // }
+            }
+
+            // Prepare article data
+            $articleData = [
+                'title' => trim($data['title']),
+                'slug' => $slug,
+                'content' => $data['content'],
+                'excerpt' => $excerpt,
+                'featured_image' => $featuredImage,
+                'status' => $isPublish ? "published" : 'draft',
+                'author_id' => $userId,
+                'categories' => $data['categories'] ?? null,
+                'seo_title' => $data['seo_title'] ?? null,
+                'seo_description' => $data['seo_description'] ?? null,
+                'seo_keywords' => $data['seo_keywords'] ?? null,
+                'published_at' => $publishedAt,
+            ];
+            dd($articleData);
+        } catch (Exception $e) {
+        }
+    }
+
+    /**
+     * Validate article data
+     */
+    private function validateArticleData($request, bool $isPublishing = false): ErrorMessage
+    {
+        $data = $request->getParsedBody();
+        $errors = new ErrorMessage();
+
+        // Title validation
+        if (empty($data['title'])) {
+            $errors->add('title', 'Title is required');
+        } elseif (strlen($data['title']) > 255) {
+            $errors->add('title', 'Title must not exceed 255 characters');
+        }
+
+        // Content validation (stricter for publishing)
+        if ($isPublishing) {
+            if (empty($data['content'])) {
+                $errors->add('content', 'Content is required');
+            } elseif (strlen(strip_tags($data['content'])) < 50) {
+                $errors->add('content', 'Content must be at least 50 characters');
+            }
+        }
+
+        // Excerpt validation
+        if (!empty($data['excerpt']) && strlen($data['excerpt']) > 500) {
+            $errors->add('excerpt', 'Excerpt must not exceed 500 characters');
+        }
+
+        // SEO title validation
+        if (!empty($data['seo_title']) && strlen($data['seo_title']) > 60) {
+            $errors->add('seo_title', 'SEO title should not exceed 60 characters');
+        }
+
+        // SEO description validation
+        if (!empty($data['seo_description']) && strlen($data['seo_description']) > 160) {
+            $errors->add('seo_description', 'SEO description should not exceed 160 characters');
+        }
+
+        // SEO keywords validation
+        if (!empty($data['seo_keywords']) && strlen($data['seo_keywords']) > 255) {
+            $errors->add('seo_keywords', 'SEO keywords should not exceed 255 characters');
+        }
+
+        // Category validation (optional but recommended for publishing)
+        if ($isPublishing && empty($data['categories'])) {
+            $errors->add('categories', 'Please select a category for your article');
+        }
+
+        return $errors;
+    }
+
     /**
      * Create article revision
      */
@@ -169,57 +301,6 @@ class AdminArticleController extends Controller
             error_log("Failed to create revision: " . $e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * Validate article data
-     */
-    private function validateArticleData(array $data, bool $isPublishing = false): array
-    {
-        $errors = [];
-
-        // Title validation
-        if (empty($data['title'])) {
-            $errors['title'] = 'Title is required';
-        } elseif (strlen($data['title']) > 255) {
-            $errors['title'] = 'Title must not exceed 255 characters';
-        }
-
-        // Content validation (stricter for publishing)
-        if ($isPublishing) {
-            if (empty($data['content'])) {
-                $errors['content'] = 'Content is required';
-            } elseif (strlen(strip_tags($data['content'])) < 50) {
-                $errors['content'] = 'Content must be at least 50 characters';
-            }
-        }
-
-        // Excerpt validation
-        if (!empty($data['excerpt']) && strlen($data['excerpt']) > 500) {
-            $errors['excerpt'] = 'Excerpt must not exceed 500 characters';
-        }
-
-        // SEO title validation
-        if (!empty($data['seo_title']) && strlen($data['seo_title']) > 60) {
-            $errors['seo_title'] = 'SEO title should not exceed 60 characters';
-        }
-
-        // SEO description validation
-        if (!empty($data['seo_description']) && strlen($data['seo_description']) > 160) {
-            $errors['seo_description'] = 'SEO description should not exceed 160 characters';
-        }
-
-        // SEO keywords validation
-        if (!empty($data['seo_keywords']) && strlen($data['seo_keywords']) > 255) {
-            $errors['seo_keywords'] = 'SEO keywords should not exceed 255 characters';
-        }
-
-        // Category validation (optional but recommended for publishing)
-        if ($isPublishing && empty($data['categories'])) {
-            $errors['categories'] = 'Please select a category for your article';
-        }
-
-        return $errors;
     }
 
     /**
@@ -297,7 +378,7 @@ class AdminArticleController extends Controller
         }
 
         // Get user ID from session
-        $userId = $_SESSION['auth_user_id'] ?? $_SESSION['auth_user_id'] ?? null;
+        $userId = $_SESSION['user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['admin_id'] ?? null;
 
         return $userId ? (int) $userId : null;
     }

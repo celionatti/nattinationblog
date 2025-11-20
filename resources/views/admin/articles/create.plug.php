@@ -85,9 +85,9 @@
 <p class="page-subtitle">Write and publish engaging content for your audience.</p>
 
 <!-- Form for PHP handling -->
-<form action="" method="POST" enctype="multipart/form-data" id="postForm">
+<form action="{{ route('admin.articles.store') }}" method="POST" enctype="multipart/form-data" id="postForm">
     @csrf
-    
+
     <!-- Hidden field to determine action -->
     <input type="hidden" name="action" id="formAction" value="draft">
 
@@ -98,15 +98,17 @@
             <div class="editor-card">
                 <div class="editor-card-body title-container">
                     <div class="form-group" style="width: 100%;">
-                        <textarea 
-                            class="form-control title-input" 
-                            name="title" 
-                            id="postTitle" 
+                        <textarea
+                            class="form-control title-input @error('title') is-invalid @enderror"
+                            name="title"
+                            id="postTitle"
                             placeholder="Add title"
-                            rows="1" 
-                            autocomplete="off" 
-                            style="height: auto;"
-                        ></textarea>
+                            rows="1"
+                            autocomplete="off"
+                            style="height: auto;"></textarea>
+                        @error('title')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -115,13 +117,12 @@
             <div class="editor-card">
                 <div class="editor-card-body">
                     <div class="form-group">
-                        <textarea 
-                            id="summernote" 
-                            name="content" 
-                            class="form-control <?= !empty($errors['content']) ? 'is-invalid' : '' ?>"
-                        ><?= htmlspecialchars($oldData['content'] ?? '') ?></textarea>
+                        <textarea
+                            id="summernote"
+                            name="content"
+                            class="form-control @error('content') is-invalid @enderror"></textarea>
                         @error('content')
-                        {{ $message }}
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>
@@ -134,17 +135,16 @@
                 </div>
                 <div class="editor-card-body">
                     <div class="form-group">
-                        <textarea 
-                            class="form-control <?= !empty($errors['excerpt']) ? 'is-invalid' : '' ?>" 
-                            name="excerpt" 
-                            id="postExcerpt" 
+                        <textarea
+                            class="form-control @error('excerpt') is-invalid @enderror"
+                            name="excerpt"
+                            id="postExcerpt"
                             rows="3"
-                            placeholder="Write a brief excerpt that will appear in post previews..."
-                        ><?= htmlspecialchars($oldData['excerpt'] ?? '') ?></textarea>
+                            placeholder="Write a brief excerpt that will appear in post previews..."></textarea>
                         <div class="form-text">An optional hand-crafted summary of your post.</div>
-                        <?php if (!empty($errors['excerpt'])): ?>
-                            <span class="error-message"><?= htmlspecialchars($errors['excerpt']) ?></span>
-                        <?php endif; ?>
+                        @error('excerpt')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -184,25 +184,20 @@
                 <div class="editor-card-body">
                     <div class="form-group">
                         <?php if (!empty($categories) && $categories->count() > 0): ?>
-                            <select 
-                                class="form-select <?= !empty($errors['categories']) ? 'is-invalid' : '' ?>" 
-                                name="categories" 
-                                id="categoriesSelect"
-                            >
+                            <select
+                                class="form-select @error('categories') is-invalid @enderror"
+                                name="categories"
+                                id="categoriesSelect">
                                 <option value="">Select a category</option>
                                 <?php foreach ($categories as $category): ?>
-                                    <option 
-                                        value="{{ $category->id }}" 
+                                    <option
+                                        value="{{ $category->id }}"
                                         data-color="{{ $category->color }}"
-                                        <?= isset($oldData['categories']) && $oldData['categories'] == $category->id ? 'selected' : '' ?>
-                                    >
+                                        {{ old('categories') === $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <?php if (!empty($errors['categories'])): ?>
-                                <span class="error-message"><?= htmlspecialchars($errors['categories']) ?></span>
-                            <?php endif; ?>
                         <?php else: ?>
                             <p class="text-muted">No categories available</p>
                         <?php endif; ?>
@@ -212,6 +207,9 @@
                             <i class="bi bi-plus"></i>
                             Add New Category
                         </button>
+                        @error('categories')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -232,9 +230,7 @@
                         </div>
                         <img src="" class="featured-image-preview" id="featuredImagePreview" alt="Featured Image">
                     </div>
-                    <?php if (!empty($errors['featured_image'])): ?>
-                        <span class="error-message"><?= htmlspecialchars($errors['featured_image']) ?></span>
-                    <?php endif; ?>
+
                     <div class="featured-image-actions" id="featuredImageActions" style="display: none;">
                         <button type="button" class="btn-custom btn-secondary" id="changeImage">
                             <i class="bi bi-arrow-repeat"></i>
@@ -256,32 +252,30 @@
                 <div class="editor-card-body">
                     <div class="form-group">
                         <label for="seoTitle" class="form-label">SEO Title</label>
-                        <input 
-                            type="text" 
-                            class="form-control <?= !empty($errors['seo_title']) ? 'is-invalid' : '' ?>" 
-                            name="seo_title" 
+                        <input
+                            type="text"
+                            class="form-control @error('seo_title') is-invalid @enderror"
+                            name="seo_title"
                             id="seoTitle"
                             placeholder="SEO optimized title"
-                            value="<?= htmlspecialchars($oldData['seo_title'] ?? '') ?>"
-                        >
+                            value="">
                         <div class="form-text">Recommended: 50-60 characters</div>
-                        <?php if (!empty($errors['seo_title'])): ?>
-                            <span class="error-message"><?= htmlspecialchars($errors['seo_title']) ?></span>
-                        <?php endif; ?>
+                        @error('seo_title')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="form-group">
                         <label for="seoDescription" class="form-label">Meta Description</label>
-                        <textarea 
-                            class="form-control <?= !empty($errors['seo_description']) ? 'is-invalid' : '' ?>" 
-                            name="seo_description" 
-                            id="seoDescription" 
+                        <textarea
+                            class="form-control @error('seo_description') is-invalid @enderror"
+                            name="seo_description"
+                            id="seoDescription"
                             rows="3"
-                            placeholder="Write a compelling meta description"
-                        ><?= htmlspecialchars($oldData['seo_description'] ?? '') ?></textarea>
+                            placeholder="Write a compelling meta description"></textarea>
                         <div class="form-text">Recommended: 150-160 characters</div>
-                        <?php if (!empty($errors['seo_description'])): ?>
-                            <span class="error-message"><?= htmlspecialchars($errors['seo_description']) ?></span>
-                        <?php endif; ?>
+                        @error('seo_description')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="seo-preview">
                         <div class="seo-title" id="seoPreviewTitle">Your SEO title will appear here</div>
@@ -304,7 +298,7 @@
 
 <script>
     // ========== SUMMERNOTE INITIALIZATION ==========
-    $(document).ready(function () {
+    $(document).ready(function() {
         $('#summernote').summernote({
             height: 400,
             placeholder: 'Start writing your post...',
@@ -319,11 +313,11 @@
                 ['view', ['fullscreen', 'codeview', 'help']]
             ],
             callbacks: {
-                onChange: function (contents, $editable) {
+                onChange: function(contents, $editable) {
                     // Sync content back to textarea
                     $('#summernote').val(contents);
                 },
-                onInit: function () {
+                onInit: function() {
                     // Initialize with any existing content
                     $('#summernote').val($('#summernote').summernote('code'));
                 }
@@ -331,7 +325,7 @@
         });
 
         // ========== FORM SUBMISSION HANDLING ==========
-        $('#postForm').on('submit', function (e) {
+        $('#postForm').on('submit', function(e) {
             // Ensure Summernote content is synced before form submission
             const summernoteContent = $('#summernote').summernote('code');
             $('#summernote').val(summernoteContent);
@@ -339,17 +333,17 @@
             // Basic client-side validation
             const title = $('#postTitle').val().trim();
             const action = $('#formAction').val();
-            
-            if (!title) {
-                e.preventDefault();
-                alert('Please add a title to your article.');
-                return false;
-            }
+
+            // if (!title) {
+            //     e.preventDefault();
+            //     alert('Please add a title to your article.');
+            //     return false;
+            // }
 
             // Only validate content for publishing
             if (action === 'publish') {
                 const contentText = $(summernoteContent).text().trim();
-                
+
                 if (!summernoteContent || contentText.length < 50) {
                     e.preventDefault();
                     alert('Please add at least 50 characters of content before publishing.');
@@ -359,13 +353,13 @@
         });
 
         // ========== SAVE DRAFT BUTTON ==========
-        $('#saveDraft').on('click', function () {
+        $('#saveDraft').on('click', function() {
             $('#formAction').val('draft');
             $('#postForm').submit();
         });
 
         // ========== PUBLISH BUTTON ==========
-        $('#publishPost').on('click', function () {
+        $('#publishPost').on('click', function() {
             $('#formAction').val('publish');
             $('#postForm').submit();
         });
@@ -373,7 +367,7 @@
         // ========== AUTO-RESIZE TITLE TEXTAREA ==========
         const titleTextarea = document.getElementById('postTitle');
         if (titleTextarea) {
-            titleTextarea.addEventListener('input', function () {
+            titleTextarea.addEventListener('input', function() {
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
             });
@@ -447,20 +441,20 @@
     const removeImageBtn = document.getElementById('removeImage');
 
     if (featuredImageContainer) {
-        featuredImageContainer.addEventListener('click', function () {
+        featuredImageContainer.addEventListener('click', function() {
             featuredImageInput.click();
         });
     }
 
     if (changeImageBtn) {
-        changeImageBtn.addEventListener('click', function (e) {
+        changeImageBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             featuredImageInput.click();
         });
     }
 
     if (removeImageBtn) {
-        removeImageBtn.addEventListener('click', function (e) {
+        removeImageBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             featuredImagePreview.src = '';
             featuredImagePreview.style.display = 'none';
@@ -471,27 +465,27 @@
     }
 
     if (featuredImageInput) {
-        featuredImageInput.addEventListener('change', function (e) {
+        featuredImageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 // Client-side validation
                 const maxSize = 5 * 1024 * 1024; // 5MB
                 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-                
+
                 if (file.size > maxSize) {
                     alert('Image file size must be less than 5MB.');
                     this.value = '';
                     return;
                 }
-                
+
                 if (!allowedTypes.includes(file.type)) {
                     alert('Only JPG, PNG, GIF, and WebP images are allowed.');
                     this.value = '';
                     return;
                 }
-                
+
                 const reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     featuredImagePreview.src = e.target.result;
                     featuredImagePreview.style.display = 'block';
                     featuredImageActions.style.display = 'flex';
