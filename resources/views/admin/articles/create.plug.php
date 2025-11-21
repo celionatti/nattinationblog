@@ -105,7 +105,7 @@
                             placeholder="Add title"
                             rows="1"
                             autocomplete="off"
-                            style="height: auto;"></textarea>
+                            style="height: auto;">{{ old('title') }}</textarea>
                         @error('title')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -120,7 +120,7 @@
                         <textarea
                             id="summernote"
                             name="content"
-                            class="form-control @error('content') is-invalid @enderror"></textarea>
+                            class="form-control @error('content') is-invalid @enderror">{{ old('content') }}</textarea>
                         @error('content')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -140,7 +140,7 @@
                             name="excerpt"
                             id="postExcerpt"
                             rows="3"
-                            placeholder="Write a brief excerpt that will appear in post previews..."></textarea>
+                            placeholder="Write a brief excerpt that will appear in post previews...">{{ old('excerpt') }}</textarea>
                         <div class="form-text">An optional hand-crafted summary of your post.</div>
                         @error('excerpt')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -258,7 +258,7 @@
                             name="seo_title"
                             id="seoTitle"
                             placeholder="SEO optimized title"
-                            value="">
+                            value="{{ old('seo_title') }}">
                         <div class="form-text">Recommended: 50-60 characters</div>
                         @error('seo_title')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -271,7 +271,7 @@
                             name="seo_description"
                             id="seoDescription"
                             rows="3"
-                            placeholder="Write a compelling meta description"></textarea>
+                            placeholder="Write a compelling meta description">{{ old('seo_description') }}</textarea>
                         <div class="form-text">Recommended: 150-160 characters</div>
                         @error('seo_description')
                         <div class="invalid-feedback d-block">{{ $message }}</div>

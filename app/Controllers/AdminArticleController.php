@@ -152,6 +152,8 @@ class AdminArticleController extends Controller
     public function store(Request $request)
     {
         try {
+            $this->currentRequest = $request;
+
             $data = $request->getParsedBody();
 
             $isPublish = $data['action'] === 'publish' ? true : false;
@@ -206,7 +208,7 @@ class AdminArticleController extends Controller
                 'slug' => $slug,
                 'content' => $data['content'],
                 'excerpt' => $excerpt,
-                'featured_image' => $featuredImage,
+                'featured_image' => $featuredImage['url'],
                 'status' => $isPublish ? "published" : 'draft',
                 'author_id' => $userId,
                 'categories' => $data['categories'] ?? null,
@@ -215,8 +217,29 @@ class AdminArticleController extends Controller
                 'seo_keywords' => $data['seo_keywords'] ?? null,
                 'published_at' => $publishedAt,
             ];
-            dd($articleData);
+
+            // Create the article
+            $article = Article::create($articleData);
+            
+            if($article) {
+                // Create initial revision
+                $this->createRevision($article, $userId, 'Initial version');
+                
+                FlashMessage::success('Article created successfully!');
+                
+                // Redirect based on action
+                if (isset($data['action']) && $data['action'] === 'draft') {
+                    return $this->redirect("/admin/articles/edit/{$article->id}");
+                }
+                
+                return $this->redirect('/admin/articles');
+            } else {
+                FlashMessage::error('Failed to create article. Please try again.');
+                return $this->redirect('/admin/articles/new-article');
+            }
         } catch (Exception $e) {
+            FlashMessage::error('Error creating article: ' . $e->getMessage());
+            return $this->redirect('/admin/articles/new-article');
         }
     }
 
@@ -300,6 +323,7 @@ class AdminArticleController extends Controller
         } catch (Exception $e) {
             // Log error but don't fail the main operation
             error_log("Failed to create revision: " . $e->getMessage());
+            FlashMessage::error("Failed to create revision: " . $e->getMessage(), "Failed Process");
             return false;
         }
     }

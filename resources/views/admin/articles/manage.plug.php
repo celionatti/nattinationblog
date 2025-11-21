@@ -132,16 +132,15 @@
                                 </div>
                                 @endif
                                 <div class="post-details">
-                                    <div class="post-title-text">{{ $article->title }}</div>
-                                    <div class="post-excerpt">{{ $article->excerpt ?: \Illuminate\Support\Str::limit(strip_tags($article->content), 100) }}</div>
+                                    <div class="post-title-text">@titleTruncate($article->title, 50)</div>
+                                    <div class="post-excerpt">@truncate($article->excerpt)</div>
                                     <div class="post-category">Featured Article</div>
-                                    <div class="post-slug">{{ $article->slug }}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <div class="author-info">
-                                <div class="author-avatar">{{ substr($article->author->name ?? 'Unknown', 0, 2) }}</div>
+                                <div class="author-avatar">{{ substr($article->author->name ?? 'UNKNOWN', 0, 2) }}</div>
                                 <span>{{ $article->author->name ?? 'Unknown' }}</span>
                             </div>
                         </td>
@@ -156,13 +155,13 @@
                             @endphp
                             <span class="status-badge {{ $statusClass }}">{{ ucfirst($article->status) }}</span>
                         </td>
-                        <td>{{ number_format($article->view_count ?? 0) }}</td>
-                        <td>{{ number_format($article->comment_count ?? 0) }}</td>
+                        <td>@number($article->view_count ?? 0)</td>
+                        <td>@number($article->comment_count ?? 0)</td>
                         <td>
                             @if($article->published_at)
-                            {{ $article->published_at->diffForHumans() }}
+                            @diffForHumans($article->published_at)
                             @else
-                            {{ $article->created_at->diffForHumans() }}
+                            @diffForHumans($article->created_at)
                             @endif
                         </td>
                         <td>
@@ -170,7 +169,7 @@
                                 <a href="{{ route('admin.articles.edit', ['id' => $article->id]) }}" class="action-btn edit" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{{ route('articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
+                                <a href="{{ route('admin.articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <form method="POST" action="{{ route('admin.articles.toggle-status', ['id' => $article->id]) }}" style="display: inline;">
