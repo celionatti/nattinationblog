@@ -45,7 +45,7 @@
         <input type="hidden" name="page" value="{{ $_GET['page'] ?? 1 }}">
     </form>
 
-    <button type="button" onclick="window.location.href='{{ route('admin.articles.create') }}'" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
+    <button type="button" onclick="window.location.href='<?= route('admin.articles.create') ?>'" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
         <i class="bi bi-plus-lg"></i>
         New Post
     </button>
@@ -148,7 +148,10 @@
                             </div>
                         </td>
                         <td>
-                            <span>{{ $categoryName ?? "Uncategorized" }}</span>
+                            @php
+                            $categoryName = $article->category ? $article->category->name : 'Uncategorized';
+                            @endphp
+                            <span>{{ $categoryName }}</span>
                         </td>
                         <td>
                             @php
@@ -206,11 +209,11 @@
                 <h3 class="empty-state-title">No Articles Found</h3>
                 <p>No articles match your current filters. Try adjusting your search criteria or create a new article.</p>
                 <div class="empty-state-actions">
-                    <button type="button" onclick="window.location.href='{{ route('admin.articles.create') }}'" class="btn-custom btn-primary">
+                    <button type="button" onclick="window.location.href='<?= route('admin.articles.create') ?>'" class="btn-custom btn-primary">
                         <i class="bi bi-plus-lg"></i>
                         Create Article
                     </button>
-                    <button type="button" onclick="window.location.href='{{ route('admin.articles.index') }}'" class="btn-custom btn-secondary">
+                    <button type="button" onclick="window.location.href='<?= route('admin.articles.index') ?>'" class="btn-custom btn-secondary">
                         <i class="bi bi-arrow-clockwise"></i>
                         Clear Filters
                     </button>

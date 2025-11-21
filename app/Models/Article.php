@@ -62,11 +62,11 @@ class Article extends PlugModel
     }
 
     /**
-     * Relationship: Article has many revisions
+     * Relationship: Article belongs to Category
      */
-    public function revisions()
+    public function category()
     {
-        return $this->hasMany(ArticleRevision::class, 'article_id', 'id');
+        return $this->belongsTo(Category::class, 'categories', 'id');
     }
 
     /**
@@ -80,15 +80,6 @@ class Article extends PlugModel
             'article_id',
             'category_id'
         );
-    }
-
-    /**
-     * Get latest revision
-     */
-    public function latestRevision()
-    {
-        return $this->hasOne(ArticleRevision::class, 'article_id', 'id')
-            ->orderBy('revision_number', 'DESC');
     }
 
     /**

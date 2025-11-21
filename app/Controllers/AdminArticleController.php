@@ -50,7 +50,7 @@ class AdminArticleController extends Controller
             $statusFilter = $queryParams['status'] ?? 'all';
             $authorFilter = $queryParams['author'] ?? 'all';
             $dateFilter = $queryParams['date'] ?? 'all';
-            $perPage = 2;
+            $perPage = 10;
             $currentPage = (int)($queryParams['page'] ?? 1);
 
             // Build query with eager loading
@@ -91,15 +91,11 @@ class AdminArticleController extends Controller
             $articles = $paginator->items();
 
             // Get categories and authors for filters
-            $categories = Category::where('is_active', true)
-                ->orderBy('name', 'ASC')
-                ->get();
 
             $authors = User::all();
 
             $data = [
                 'articles' => $articles,
-                'categories' => $categories,
                 'authors' => $authors,
                 'paginator' => $paginator,
                 'status_filter' => $statusFilter,
