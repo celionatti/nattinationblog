@@ -6,27 +6,22 @@ namespace App\Models;
 
 /*
 |--------------------------------------------------------------------------
-| Article Revision Model
+| Article Categories Model
 |--------------------------------------------------------------------------
-| This model represents the article revisions.
+| This model represents the article categories.
 | Tracks article changes and draft versions.
 */
 
 use Plugs\Base\Model\PlugModel;
 
-class ArticleRevision extends PlugModel
+class ArticleCategories extends PlugModel
 {
-    protected $table = 'article_revisions';
+    protected $table = 'article_categories';
     protected $primaryKey = 'id';
     
     protected $fillable = [
         'article_id',
-        'revision_number',
-        'title',
-        'content',
-        'excerpt',
-        'author_id',
-        'revision_notes'
+        'category_id',
     ];
 
     protected $guarded = ['id'];
@@ -34,9 +29,7 @@ class ArticleRevision extends PlugModel
     protected $casts = [
         'id' => 'int',
         'article_id' => 'int',
-        'revision_number' => 'int',
-        'author_id' => 'int',
-        'created_at' => 'datetime'
+        'category_id' => 'int'
     ];
 
     protected $timestamps = false; // Only uses created_at
@@ -58,11 +51,11 @@ class ArticleRevision extends PlugModel
     }
 
     /**
-     * Relationship: Revision belongs to User (Author)
+     * Relationship: Revision belongs to User (Category)
      */
-    public function author()
+    public function category()
     {
-        return $this->belongsTo(User::class, 'author_id', 'id');
+        return $this->belongsTo(Category::class, 'category_id', 'id');
     }
 
     /**
@@ -71,31 +64,5 @@ class ArticleRevision extends PlugModel
     public function getCreatedDateAttribute(): string
     {
         return date('F j, Y g:i A', strtotime($this->created_at));
-    }
-
-    /**
-     * Get revision label
-     */
-    public function getRevisionLabelAttribute(): string
-    {
-        return "Revision #{$this->revision_number}";
-    }
-
-    /**
-     * Restore this revision to the article
-     */
-    public function restore(): bool
-    {
-        $article = $this->article;
-        
-        if (!$article) {
-            return false;
-        }
-
-        return $article->update([
-            'title' => $this->title,
-            'content' => $this->content,
-            'excerpt' => $this->excerpt
-        ]);
     }
 }

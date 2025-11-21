@@ -16,13 +16,14 @@ use Exception;
 use App\Models\User;
 use App\Models\Article;
 use App\Models\Category;
+use Plugs\View\ErrorMessage;
 use Plugs\Utils\FlashMessage;
 use Plugs\Paginator\Paginator;
 use Plugs\Upload\FileUploader;
 use Plugs\Upload\UploadedFile;
 use App\Models\ArticleRevision;
+use App\Models\ArticleCategories;
 use Plugs\Base\Controller\Controller;
-use Plugs\View\ErrorMessage;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -37,6 +38,7 @@ class AdminArticleController extends Controller
         $this->uploader->imagesOnly(5 * 1024 * 1024)->setImageDimensions(maxWidth: 2000, maxHeight: 2000);
         $this->uploader->disableSecurityFiles();
     }
+
     /**
      * Display article management page
      */
@@ -48,11 +50,11 @@ class AdminArticleController extends Controller
             $statusFilter = $queryParams['status'] ?? 'all';
             $authorFilter = $queryParams['author'] ?? 'all';
             $dateFilter = $queryParams['date'] ?? 'all';
-            $perPage = 15;
+            $perPage = 2;
             $currentPage = (int)($queryParams['page'] ?? 1);
 
-            // Build query - get all articles first
-            $articles = Article::with(['author']);
+            // Build query with eager loading
+            $articles = Article::with(['author', 'categories']);
 
             // Apply status filter
             if ($statusFilter !== 'all') {
@@ -61,12 +63,11 @@ class AdminArticleController extends Controller
 
             // Apply author filter
             if ($authorFilter !== 'all') {
-                $articles = $articles->where('author_id', $authorFilter);
+                $articles = $articles->where('author_id', (int)$authorFilter);
             }
 
             // Apply date filter
             if ($dateFilter !== 'all') {
-                $now = date('Y-m-d H:i:s');
                 switch ($dateFilter) {
                     case 'today':
                         $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00'));
@@ -80,8 +81,8 @@ class AdminArticleController extends Controller
                 }
             }
 
-            // Apply sorting
-            $articles = $articles->latest('created_at');
+            // Apply sorting - latest first
+            $articles = $articles->orderBy('created_at', 'DESC');
 
             // Create paginator
             $paginator = Paginator::fromQuery($articles, $perPage, $currentPage);
@@ -94,7 +95,7 @@ class AdminArticleController extends Controller
                 ->orderBy('name', 'ASC')
                 ->get();
 
-            $authors = User::all(); // Get all users for now
+            $authors = User::all();
 
             $data = [
                 'articles' => $articles,
@@ -156,7 +157,7 @@ class AdminArticleController extends Controller
 
             $data = $request->getParsedBody();
 
-            $isPublish = $data['action'] === 'publish' ? true : false;
+            $isPublish = ($data['action'] ?? '') === 'publish';
 
             $errors = $this->validateArticleData($request, $isPublish);
 
@@ -165,7 +166,7 @@ class AdminArticleController extends Controller
                 return $this->back($errors);
             }
 
-            // Get current user ID (you might need to adjust this based on your auth system)
+            // Get current user ID
             $userId = $this->getCurrentUserId($request);
             if (!$userId) {
                 FlashMessage::error('You must be logged in to create an article.');
@@ -175,11 +176,12 @@ class AdminArticleController extends Controller
             // Handle featured image upload
             $featuredImage = null;
 
-            if(isset($_FILES['featured_image'])) {
+            if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
                 $file = UploadedFile::createFromFilesArray($_FILES['featured_image']);
                 try {
-                    $featuredImage = $this->uploader->upload($file, null, (string)$userId);
-                } catch(Exception $e) {
+                    $uploadResult = $this->uploader->upload($file, null, (string)$userId);
+                    $featuredImage = $uploadResult['url'];
+                } catch (Exception $e) {
                     FlashMessage::error("Upload failed: " . $e->getMessage());
                     return $this->redirect("/admin/articles/new-article");
                 }
@@ -188,18 +190,26 @@ class AdminArticleController extends Controller
             // Generate slug from title
             $slug = $this->generateSlug($data['title']);
 
-            // Generate excerpt if not provided
-            $excerpt = $body['excerpt'] ?? $this->generateExcerpt($data['content']);
+            // Generate excerpt if not provided or empty
+            $excerpt = $this->getExcerpt($data);
+
+            // Generate SEO fields if not provided
+            $seoTitle = !empty(trim($data['seo_title'] ?? ''))
+                ? trim($data['seo_title'])
+                : $this->generateSeoTitle($data['title']);
+
+            $seoDescription = !empty(trim($data['seo_description'] ?? ''))
+                ? trim($data['seo_description'])
+                : $this->generateSeoDescription($data['content'], $data['title']);
+
+            $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
+                ? trim($data['seo_keywords'])
+                : $this->generateSeoKeywords($data['content'], $data['title']);
 
             // Determine published_at date
             $publishedAt = null;
-            if (isset($data['action']) && $data['action'] === 'publish') {
+            if ($isPublish) {
                 $publishedAt = date('Y-m-d H:i:s');
-                
-                // If scheduled publishing is implemented later:
-                // if (isset($body['publish_at']) && !empty($body['publish_at'])) {
-                //     $publishedAt = date('Y-m-d H:i:s', strtotime($body['publish_at']));
-                // }
             }
 
             // Prepare article data
@@ -208,30 +218,30 @@ class AdminArticleController extends Controller
                 'slug' => $slug,
                 'content' => $data['content'],
                 'excerpt' => $excerpt,
-                'featured_image' => $featuredImage['url'],
+                'categories' => $data['categories'],
+                'featured_image' => $featuredImage,
                 'status' => $isPublish ? "published" : 'draft',
                 'author_id' => $userId,
-                'categories' => $data['categories'] ?? null,
-                'seo_title' => $data['seo_title'] ?? null,
-                'seo_description' => $data['seo_description'] ?? null,
-                'seo_keywords' => $data['seo_keywords'] ?? null,
+                'seo_title' => $seoTitle,
+                'seo_description' => $seoDescription,
+                'seo_keywords' => $seoKeywords,
                 'published_at' => $publishedAt,
             ];
 
             // Create the article
             $article = Article::create($articleData);
-            
-            if($article) {
-                // Create initial revision
-                $this->createRevision($article, $userId, 'Initial version');
-                
+
+            if ($article) {
+                // Create article categories linking
+                $this->createArticleCategories($article, $data['categories']);
+
                 FlashMessage::success('Article created successfully!');
-                
+
                 // Redirect based on action
-                if (isset($data['action']) && $data['action'] === 'draft') {
+                if ($data['action'] === 'draft') {
                     return $this->redirect("/admin/articles/edit/{$article->id}");
                 }
-                
+
                 return $this->redirect('/admin/articles');
             } else {
                 FlashMessage::error('Failed to create article. Please try again.');
@@ -295,37 +305,261 @@ class AdminArticleController extends Controller
         return $errors;
     }
 
-    /**
-     * Create article revision
-     */
-    private function createRevision(Article $article, int $userId, string $notes = ''): bool
+    private function createArticleCategories(Article $article, $category): bool
     {
         try {
-            // Get next revision number
-            $lastRevision = ArticleRevision::where('article_id', $article->id)
-                ->orderBy('revision_number', 'DESC')
-                ->first();
 
-            $revisionNumber = $lastRevision ? $lastRevision->revision_number + 1 : 1;
-
-            // Create revision
-            ArticleRevision::create([
+            ArticleCategories::create([
                 'article_id' => $article->id,
-                'revision_number' => $revisionNumber,
-                'title' => $article->title,
-                'content' => $article->content,
-                'excerpt' => $article->excerpt,
-                'author_id' => $userId,
-                'revision_notes' => $notes
+                'category_id' => $category
             ]);
 
             return true;
         } catch (Exception $e) {
-            // Log error but don't fail the main operation
-            error_log("Failed to create revision: " . $e->getMessage());
-            FlashMessage::error("Failed to create revision: " . $e->getMessage(), "Failed Process");
+            error_log("Failed to create article categories: " . $e->getMessage());
+            FlashMessage::error("Failed to create article categories: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Get excerpt from data - handles both empty strings and null values
+     */
+    private function getExcerpt(array $data): string
+    {
+        // Check if excerpt exists and is not empty (after trimming)
+        $excerpt = trim($data['excerpt'] ?? '');
+
+        // If excerpt is provided and not empty, use it
+        if (!empty($excerpt)) {
+            return $excerpt;
+        }
+
+        // Otherwise generate from content
+        return $this->generateExcerpt($data['content'] ?? '');
+    }
+
+    /**
+     * Generate SEO Title from article title
+     */
+    private function generateSeoTitle(string $title, int $maxLength = 60): string
+    {
+        // Clean and format the title
+        $seoTitle = trim($title);
+
+        // Remove extra spaces
+        $seoTitle = preg_replace('/\s+/', ' ', $seoTitle);
+
+        // Ensure it doesn't exceed max length
+        if (strlen($seoTitle) > $maxLength) {
+            $seoTitle = substr($seoTitle, 0, $maxLength);
+
+            // Don't cut in the middle of a word if possible
+            $lastSpace = strrpos($seoTitle, ' ');
+            if ($lastSpace !== false && $lastSpace > $maxLength - 20) {
+                $seoTitle = substr($seoTitle, 0, $lastSpace);
+            }
+
+            // Remove trailing punctuation and add ellipsis if needed
+            $seoTitle = rtrim($seoTitle, ".,!?-");
+            if (strlen($seoTitle) < strlen($title)) {
+                $seoTitle .= '...';
+            }
+        }
+
+        return $seoTitle;
+    }
+
+    /**
+     * Generate SEO Description from content
+     */
+    private function generateSeoDescription(string $content, string $title = '', int $maxLength = 160): string
+    {
+        // Strip HTML tags and decode HTML entities
+        $text = strip_tags($content);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Remove extra whitespace
+        $text = preg_replace('/\s+/', ' ', trim($text));
+
+        // If content is too short, use title as fallback
+        if (strlen($text) < 50 && !empty($title)) {
+            $text = $title . ' - ' . $text;
+        }
+
+        // Trim to specified length
+        if (strlen($text) > $maxLength) {
+            $text = substr($text, 0, $maxLength);
+
+            // Find last complete word
+            $lastSpace = strrpos($text, ' ');
+            if ($lastSpace !== false && $lastSpace > $maxLength - 30) {
+                $text = substr($text, 0, $lastSpace);
+            }
+
+            // Remove trailing punctuation
+            $text = rtrim($text, ".,!?-");
+            $text .= '...';
+        }
+
+        return $text;
+    }
+
+    /**
+     * Generate SEO Keywords from content and title
+     */
+    private function generateSeoKeywords(string $content, string $title = '', int $maxKeywords = 10): string
+    {
+        // Combine title and content for keyword extraction
+        $text = $title . ' ' . $content;
+
+        // Strip HTML tags and decode HTML entities
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Convert to lowercase
+        $text = strtolower($text);
+
+        // Remove special characters but keep spaces and hyphens
+        $text = preg_replace('/[^\p{L}\p{N}\s-]/u', ' ', $text);
+
+        // Split into words
+        $words = preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
+
+        // Define common stop words to exclude
+        $stopWords = [
+            'the',
+            'a',
+            'an',
+            'and',
+            'or',
+            'but',
+            'in',
+            'on',
+            'at',
+            'to',
+            'for',
+            'of',
+            'with',
+            'by',
+            'from',
+            'up',
+            'about',
+            'into',
+            'through',
+            'during',
+            'before',
+            'after',
+            'above',
+            'below',
+            'between',
+            'among',
+            'is',
+            'are',
+            'was',
+            'were',
+            'be',
+            'been',
+            'being',
+            'have',
+            'has',
+            'had',
+            'do',
+            'does',
+            'did',
+            'will',
+            'would',
+            'could',
+            'should',
+            'may',
+            'might',
+            'must',
+            'can',
+            'this',
+            'that',
+            'these',
+            'those',
+            'i',
+            'you',
+            'he',
+            'she',
+            'it',
+            'we',
+            'they',
+            'me',
+            'him',
+            'her',
+            'us',
+            'them',
+            'my',
+            'your',
+            'his',
+            'its',
+            'our',
+            'their',
+            'what',
+            'which',
+            'who',
+            'whom',
+            'whose',
+            'when',
+            'where',
+            'why',
+            'how',
+            'all',
+            'any',
+            'both',
+            'each',
+            'few',
+            'more',
+            'most',
+            'other',
+            'some',
+            'such',
+            'no',
+            'nor',
+            'not',
+            'only',
+            'own',
+            'same',
+            'so',
+            'than',
+            'too',
+            'very'
+        ];
+
+        // Count word frequency
+        $wordCounts = [];
+        foreach ($words as $word) {
+            // Skip short words and stop words
+            if (strlen($word) <= 2 || in_array($word, $stopWords)) {
+                continue;
+            }
+
+            if (isset($wordCounts[$word])) {
+                $wordCounts[$word]++;
+            } else {
+                $wordCounts[$word] = 1;
+            }
+        }
+
+        // Sort by frequency (descending)
+        arsort($wordCounts);
+
+        // Take top keywords
+        $keywords = array_slice(array_keys($wordCounts), 0, $maxKeywords);
+
+        // Limit total characters to 255
+        $keywordString = implode(', ', $keywords);
+        if (strlen($keywordString) > 255) {
+            $keywordString = substr($keywordString, 0, 255);
+            $lastComma = strrpos($keywordString, ',');
+            if ($lastComma !== false) {
+                $keywordString = substr($keywordString, 0, $lastComma);
+            }
+        }
+
+        return $keywordString;
     }
 
     /**
@@ -370,24 +604,35 @@ class AdminArticleController extends Controller
      */
     private function generateExcerpt(string $content, int $length = 200): string
     {
-        // Strip HTML tags
+        // Handle empty content
+        if (empty(trim($content))) {
+            return '';
+        }
+
+        // Strip HTML tags and decode HTML entities
         $text = strip_tags($content);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         // Remove extra whitespace
         $text = preg_replace('/\s+/', ' ', trim($text));
 
-        // Trim to specified length
-        if (strlen($text) > $length) {
-            $text = substr($text, 0, $length);
-
-            // Find last complete word
-            $lastSpace = strrpos($text, ' ');
-            if ($lastSpace !== false) {
-                $text = substr($text, 0, $lastSpace);
-            }
-
-            $text .= '...';
+        // If text is already shorter than length, return as is
+        if (strlen($text) <= $length) {
+            return $text;
         }
+
+        // Trim to specified length
+        $text = substr($text, 0, $length);
+
+        // Find last complete word
+        $lastSpace = strrpos($text, ' ');
+        if ($lastSpace !== false) {
+            $text = substr($text, 0, $lastSpace);
+        }
+
+        // Remove trailing punctuation and add ellipsis
+        $text = rtrim($text, ".,!?-");
+        $text .= '...';
 
         return $text;
     }

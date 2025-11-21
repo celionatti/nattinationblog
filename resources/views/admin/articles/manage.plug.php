@@ -26,7 +26,7 @@
                     @foreach($authors as $author)
                     <option value="{{ $author->id }}"
                         {{ ($author_filter ?? '') == $author->id ? 'selected' : '' }}>
-                        {{ $author->name }}
+                        {{ $author->name ?? 'User #' . $author->id }}
                     </option>
                     @endforeach
                 </select>
@@ -45,7 +45,7 @@
         <input type="hidden" name="page" value="{{ $_GET['page'] ?? 1 }}">
     </form>
 
-    <button type="button" onclick="window.location.href='/admin/articles/new-article'" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
+    <button type="button" onclick="window.location.href='{{ route('admin.articles.create') }}'" class="btn-custom btn-primary text-decoration-none" id="newPostBtn">
         <i class="bi bi-plus-lg"></i>
         New Post
     </button>
@@ -134,17 +134,22 @@
                                 <div class="post-details">
                                     <div class="post-title-text">@titleTruncate($article->title, 50)</div>
                                     <div class="post-excerpt">@truncate($article->excerpt)</div>
-                                    <div class="post-category">Featured Article</div>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <div class="author-info">
-                                <div class="author-avatar">{{ substr($article->author->name ?? 'UNKNOWN', 0, 2) }}</div>
-                                <span>{{ $article->author->name ?? 'Unknown' }}</span>
+                                @php
+                                $authorName = $article->author ? $article->author->name : 'Unknown';
+                                $initials = substr($authorName, 0, 2);
+                                @endphp
+                                <div class="author-avatar">{{ $initials }}</div>
+                                <span>{{ $authorName }}</span>
                             </div>
                         </td>
-                        <td>World</td>
+                        <td>
+                            <span>{{ $categoryName ?? "Uncategorized" }}</span>
+                        </td>
                         <td>
                             @php
                             $statusClass = [
@@ -169,7 +174,7 @@
                                 <a href="{{ route('admin.articles.edit', ['id' => $article->id]) }}" class="action-btn edit" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{{ route('admin.articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
+                                <a href="{{ route('articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <form method="POST" action="{{ route('admin.articles.toggle-status', ['id' => $article->id]) }}" style="display: inline;">
@@ -201,11 +206,11 @@
                 <h3 class="empty-state-title">No Articles Found</h3>
                 <p>No articles match your current filters. Try adjusting your search criteria or create a new article.</p>
                 <div class="empty-state-actions">
-                    <button type="button" onclick="window.location.href='/admin/articles/new-article'" class="btn-custom btn-primary">
+                    <button type="button" onclick="window.location.href='{{ route('admin.articles.create') }}'" class="btn-custom btn-primary">
                         <i class="bi bi-plus-lg"></i>
                         Create Article
                     </button>
-                    <button type="button" onclick="window.location.href='/admin/articles'" class="btn-custom btn-secondary">
+                    <button type="button" onclick="window.location.href='{{ route('admin.articles.index') }}'" class="btn-custom btn-secondary">
                         <i class="bi bi-arrow-clockwise"></i>
                         Clear Filters
                     </button>
