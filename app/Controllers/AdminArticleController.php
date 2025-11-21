@@ -319,6 +319,233 @@ class AdminArticleController extends Controller
     }
 
     /**
+     * Handle bulk actions (POST)
+     */
+    public function bulkAction(Request $request): Response
+    {
+        try {
+            $body = $request->getParsedBody();
+            $action = $body['action'] ?? '';
+            $articleIds = $body['article_ids'] ?? [];
+
+            if (empty($articleIds) || !is_array($articleIds)) {
+                FlashMessage::error('No articles selected');
+                return $this->redirect('/admin/articles');
+            }
+
+            // Sanitize article IDs
+            $articleIds = array_map('intval', $articleIds);
+            $articleIds = array_filter($articleIds, fn($id) => $id > 0);
+
+            if (empty($articleIds)) {
+                FlashMessage::error('Invalid article selection');
+                return $this->redirect('/admin/articles');
+            }
+
+            $count = 0;
+
+            switch ($action) {
+                case 'publish':
+                    foreach ($articleIds as $id) {
+                        $article = Article::find($id);
+                        if ($article) {
+                            $article->status = "published";
+                            if ($article->published_at === null) {
+                                $article->published_at = date('Y-m-d H:i:s');
+                            }
+                            $article->save();
+                            $count++;
+                        }
+                    }
+                    FlashMessage::success("Successfully published {$count} " . ($count === 1 ? 'article' : 'articles'));
+                    break;
+
+                case 'draft':
+                    foreach ($articleIds as $id) {
+                        $article = Article::find($id);
+                        if ($article) {
+                            $article->status = "draft";
+                            $article->save();
+                            $count++;
+                        }
+                    }
+                    FlashMessage::success("Successfully drafted {$count} " . ($count === 1 ? 'article' : 'articles'));
+                    break;
+
+                case 'archive':
+                    foreach ($articleIds as $id) {
+                        $article = Article::find($id);
+                        if ($article) {
+                            $article->status = "archived";
+                            $article->save();
+                            $count++;
+                        }
+                    }
+                    FlashMessage::success("Successfully archived {$count} " . ($count === 1 ? 'article' : 'articles'));
+                    break;
+
+                case 'delete':
+                    // Get articles with their featured images before deletion
+                    $articles = Article::whereIn('id', $articleIds)->get();
+                    $imagesToDelete = [];
+
+                    foreach ($articles as $article) {
+                        if ($article->featured_image) {
+                            $imagesToDelete[] = $article->featured_image;
+                        }
+                    }
+
+                    // Delete the articles (this will also cascade delete related records like ArticleCategories)
+                    $count = Article::destroyMany($articleIds);
+
+                    // Delete associated images after successful article deletion
+                    if ($count > 0) {
+                        $deletedImages = 0;
+                        $failedImages = 0;
+
+                        foreach ($imagesToDelete as $imagePath) {
+                            try {
+                                // Extract relative path from full URL/path
+                                $relativePath = $this->extractRelativeImagePath($imagePath);
+
+                                if ($relativePath && $this->uploader->delete($relativePath)) {
+                                    $deletedImages++;
+                                } else {
+                                    $failedImages++;
+                                    FlashMessage::info("Failed to delete image: " . $relativePath, $imagePath ?? "");
+                                }
+                            } catch (Exception $e) {
+                                $failedImages++;
+                                FlashMessage::info("Error deleting image: " . $e->getMessage(), $imagePath ?? "");
+                            }
+                        }
+
+                        $message = "Successfully deleted {$count} " . ($count === 1 ? 'article' : 'articles');
+
+                        if ($deletedImages > 0) {
+                            $message .= " and {$deletedImages} " . ($deletedImages === 1 ? 'image' : 'images');
+                        }
+
+                        if ($failedImages > 0) {
+                            $message .= " ({$failedImages} " . ($failedImages === 1 ? 'image' : 'images') . " could not be deleted)";
+                        }
+
+                        FlashMessage::success($message);
+                    } else {
+                        FlashMessage::warning('No articles were deleted');
+                    }
+                    break;
+
+                default:
+                    FlashMessage::error("Invalid action");
+                    break;
+            }
+
+            return $this->redirect('/admin/articles');
+        } catch (Exception $e) {
+            FlashMessage::error("Bulk action failed: " . $e->getMessage(), $action ?? "unknown");
+            return $this->redirect('/admin/articles');
+        }
+    }
+
+    /**
+     * Extract relative image path from full URL or path
+     * Handles both URL formats (/uploads/articles/...) and file paths
+     */
+    private function extractRelativeImagePath(string $imagePath): ?string
+    {
+        if (empty($imagePath)) {
+            return null;
+        }
+
+        // If it's already a relative path, return it
+        if (!filter_var($imagePath, FILTER_VALIDATE_URL) && strpos($imagePath, '://') === false) {
+            // Remove leading slashes
+            return ltrim($imagePath, '/\\');
+        }
+
+        // Parse URL to get the path
+        $parsedUrl = parse_url($imagePath);
+        $path = $parsedUrl['path'] ?? '';
+
+        if (empty($path)) {
+            return null;
+        }
+
+        // Remove the base URL prefix if present
+        $baseUrl = rtrim($this->uploader->getBaseUrl(), '/');
+        if (!empty($baseUrl) && strpos($path, $baseUrl) === 0) {
+            $path = substr($path, strlen($baseUrl));
+        }
+
+        // Remove leading slashes
+        $path = ltrim($path, '/');
+
+        // Handle common upload directory prefixes
+        $commonPrefixes = ['uploads/', 'storage/uploads/', 'public/uploads/'];
+        foreach ($commonPrefixes as $prefix) {
+            if (strpos($path, $prefix) === 0) {
+                // Path might already include the full structure
+                return $path;
+            }
+        }
+
+        return $path;
+    }
+
+    /**
+ * Delete a single article with its associated image
+ * Can be used as a standalone method for single deletions
+ */
+public function destroy(Request $request, $id): Response
+{
+    try {
+        $articleId = $id;
+
+        if ($articleId <= 0) {
+            FlashMessage::error('Invalid article ID');
+            return $this->redirect('/admin/articles');
+        }
+
+        $article = Article::find($articleId);
+
+        if (!$article) {
+            FlashMessage::error('Article not found');
+            return $this->redirect('/admin/articles');
+        }
+
+        // Store featured image path before deletion
+        $featuredImage = $article->featured_image;
+
+        // Delete the article
+        if ($article->delete()) {
+            // Delete associated image if it exists
+            if ($featuredImage) {
+                try {
+                    $relativePath = $this->extractRelativeImagePath($featuredImage);
+                    
+                    if ($relativePath) {
+                        $this->uploader->delete($relativePath);
+                    }
+                } catch (Exception $e) {
+                    FlashMessage::error("Failed to delete article image: " . $e->getMessage(), "Image Path: {$featuredImage}");
+                    // Don't fail the whole operation if image deletion fails
+                }
+            }
+
+            FlashMessage::success('Article deleted successfully');
+        } else {
+            FlashMessage::error('Failed to delete article');
+        }
+
+        return $this->redirect('/admin/articles');
+    } catch (Exception $e) {
+        FlashMessage::error('Error deleting article: ' . $e->getMessage(), "Article ID: {$articleId}");
+        return $this->redirect('/admin/articles');
+    }
+}
+
+    /**
      * Get excerpt from data - handles both empty strings and null values
      */
     private function getExcerpt(array $data): string

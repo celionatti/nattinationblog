@@ -143,7 +143,7 @@
                                 $authorName = $article->author ? $article->author->name : 'Unknown';
                                 $initials = substr($authorName, 0, 2);
                                 @endphp
-                                <div class="author-avatar">{{ $initials }}</div>
+                                <div class="author-avatar text-uppercase">{{ $initials }}</div>
                                 <span>{{ $authorName }}</span>
                             </div>
                         </td>
