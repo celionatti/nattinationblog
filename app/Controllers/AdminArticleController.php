@@ -184,7 +184,12 @@ class AdminArticleController extends Controller
             }
 
             // Generate slug from title
-            $slug = $this->generateSlug($data['title']);
+            // $slug = $this->generateSlug($data['title']);
+            $slug = generateSlug(
+                $data['title'], 
+                '-', 
+                fn($s) => Article::where('slug', $s)->exists()
+            );
 
             // Generate excerpt if not provided or empty
             $excerpt = $this->getExcerpt($data);
@@ -192,15 +197,15 @@ class AdminArticleController extends Controller
             // Generate SEO fields if not provided
             $seoTitle = !empty(trim($data['seo_title'] ?? ''))
                 ? trim($data['seo_title'])
-                : $this->generateSeoTitle($data['title']);
+                : generateSeoTitle($data['title']);
 
             $seoDescription = !empty(trim($data['seo_description'] ?? ''))
                 ? trim($data['seo_description'])
-                : $this->generateSeoDescription($data['content'], $data['title']);
+                : generateSeoDescription($data['content'], $data['title']);
 
             $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
                 ? trim($data['seo_keywords'])
-                : $this->generateSeoKeywords($data['content'], $data['title']);
+                : generateSeoKeywords($data['content'], $data['title']);
 
             // Determine published_at date
             $publishedAt = null;
@@ -494,56 +499,56 @@ class AdminArticleController extends Controller
     }
 
     /**
- * Delete a single article with its associated image
- * Can be used as a standalone method for single deletions
- */
-public function destroy(Request $request, $id): Response
-{
-    try {
-        $articleId = $id;
+     * Delete a single article with its associated image
+     * Can be used as a standalone method for single deletions
+     */
+    public function destroy(Request $request, $id): Response
+    {
+        try {
+            $articleId = $id;
 
-        if ($articleId <= 0) {
-            FlashMessage::error('Invalid article ID');
-            return $this->redirect('/admin/articles');
-        }
-
-        $article = Article::find($articleId);
-
-        if (!$article) {
-            FlashMessage::error('Article not found');
-            return $this->redirect('/admin/articles');
-        }
-
-        // Store featured image path before deletion
-        $featuredImage = $article->featured_image;
-
-        // Delete the article
-        if ($article->delete()) {
-            // Delete associated image if it exists
-            if ($featuredImage) {
-                try {
-                    $relativePath = $this->extractRelativeImagePath($featuredImage);
-                    
-                    if ($relativePath) {
-                        $this->uploader->delete($relativePath);
-                    }
-                } catch (Exception $e) {
-                    FlashMessage::error("Failed to delete article image: " . $e->getMessage(), "Image Path: {$featuredImage}");
-                    // Don't fail the whole operation if image deletion fails
-                }
+            if ($articleId <= 0) {
+                FlashMessage::error('Invalid article ID');
+                return $this->redirect('/admin/articles');
             }
 
-            FlashMessage::success('Article deleted successfully');
-        } else {
-            FlashMessage::error('Failed to delete article');
-        }
+            $article = Article::find($articleId);
 
-        return $this->redirect('/admin/articles');
-    } catch (Exception $e) {
-        FlashMessage::error('Error deleting article: ' . $e->getMessage(), "Article ID: {$articleId}");
-        return $this->redirect('/admin/articles');
+            if (!$article) {
+                FlashMessage::error('Article not found');
+                return $this->redirect('/admin/articles');
+            }
+
+            // Store featured image path before deletion
+            $featuredImage = $article->featured_image;
+
+            // Delete the article
+            if ($article->delete()) {
+                // Delete associated image if it exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        FlashMessage::error("Failed to delete article image: " . $e->getMessage(), "Image Path: {$featuredImage}");
+                        // Don't fail the whole operation if image deletion fails
+                    }
+                }
+
+                FlashMessage::success('Article deleted successfully');
+            } else {
+                FlashMessage::error('Failed to delete article');
+            }
+
+            return $this->redirect('/admin/articles');
+        } catch (Exception $e) {
+            FlashMessage::error('Error deleting article: ' . $e->getMessage(), "Article ID: {$articleId}");
+            return $this->redirect('/admin/articles');
+        }
     }
-}
 
     /**
      * Get excerpt from data - handles both empty strings and null values
@@ -559,305 +564,7 @@ public function destroy(Request $request, $id): Response
         }
 
         // Otherwise generate from content
-        return $this->generateExcerpt($data['content'] ?? '');
-    }
-
-    /**
-     * Generate SEO Title from article title
-     */
-    private function generateSeoTitle(string $title, int $maxLength = 60): string
-    {
-        // Clean and format the title
-        $seoTitle = trim($title);
-
-        // Remove extra spaces
-        $seoTitle = preg_replace('/\s+/', ' ', $seoTitle);
-
-        // Ensure it doesn't exceed max length
-        if (strlen($seoTitle) > $maxLength) {
-            $seoTitle = substr($seoTitle, 0, $maxLength);
-
-            // Don't cut in the middle of a word if possible
-            $lastSpace = strrpos($seoTitle, ' ');
-            if ($lastSpace !== false && $lastSpace > $maxLength - 20) {
-                $seoTitle = substr($seoTitle, 0, $lastSpace);
-            }
-
-            // Remove trailing punctuation and add ellipsis if needed
-            $seoTitle = rtrim($seoTitle, ".,!?-");
-            if (strlen($seoTitle) < strlen($title)) {
-                $seoTitle .= '...';
-            }
-        }
-
-        return $seoTitle;
-    }
-
-    /**
-     * Generate SEO Description from content
-     */
-    private function generateSeoDescription(string $content, string $title = '', int $maxLength = 160): string
-    {
-        // Strip HTML tags and decode HTML entities
-        $text = strip_tags($content);
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        // Remove extra whitespace
-        $text = preg_replace('/\s+/', ' ', trim($text));
-
-        // If content is too short, use title as fallback
-        if (strlen($text) < 50 && !empty($title)) {
-            $text = $title . ' - ' . $text;
-        }
-
-        // Trim to specified length
-        if (strlen($text) > $maxLength) {
-            $text = substr($text, 0, $maxLength);
-
-            // Find last complete word
-            $lastSpace = strrpos($text, ' ');
-            if ($lastSpace !== false && $lastSpace > $maxLength - 30) {
-                $text = substr($text, 0, $lastSpace);
-            }
-
-            // Remove trailing punctuation
-            $text = rtrim($text, ".,!?-");
-            $text .= '...';
-        }
-
-        return $text;
-    }
-
-    /**
-     * Generate SEO Keywords from content and title
-     */
-    private function generateSeoKeywords(string $content, string $title = '', int $maxKeywords = 10): string
-    {
-        // Combine title and content for keyword extraction
-        $text = $title . ' ' . $content;
-
-        // Strip HTML tags and decode HTML entities
-        $text = strip_tags($text);
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        // Convert to lowercase
-        $text = strtolower($text);
-
-        // Remove special characters but keep spaces and hyphens
-        $text = preg_replace('/[^\p{L}\p{N}\s-]/u', ' ', $text);
-
-        // Split into words
-        $words = preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
-
-        // Define common stop words to exclude
-        $stopWords = [
-            'the',
-            'a',
-            'an',
-            'and',
-            'or',
-            'but',
-            'in',
-            'on',
-            'at',
-            'to',
-            'for',
-            'of',
-            'with',
-            'by',
-            'from',
-            'up',
-            'about',
-            'into',
-            'through',
-            'during',
-            'before',
-            'after',
-            'above',
-            'below',
-            'between',
-            'among',
-            'is',
-            'are',
-            'was',
-            'were',
-            'be',
-            'been',
-            'being',
-            'have',
-            'has',
-            'had',
-            'do',
-            'does',
-            'did',
-            'will',
-            'would',
-            'could',
-            'should',
-            'may',
-            'might',
-            'must',
-            'can',
-            'this',
-            'that',
-            'these',
-            'those',
-            'i',
-            'you',
-            'he',
-            'she',
-            'it',
-            'we',
-            'they',
-            'me',
-            'him',
-            'her',
-            'us',
-            'them',
-            'my',
-            'your',
-            'his',
-            'its',
-            'our',
-            'their',
-            'what',
-            'which',
-            'who',
-            'whom',
-            'whose',
-            'when',
-            'where',
-            'why',
-            'how',
-            'all',
-            'any',
-            'both',
-            'each',
-            'few',
-            'more',
-            'most',
-            'other',
-            'some',
-            'such',
-            'no',
-            'nor',
-            'not',
-            'only',
-            'own',
-            'same',
-            'so',
-            'than',
-            'too',
-            'very'
-        ];
-
-        // Count word frequency
-        $wordCounts = [];
-        foreach ($words as $word) {
-            // Skip short words and stop words
-            if (strlen($word) <= 2 || in_array($word, $stopWords)) {
-                continue;
-            }
-
-            if (isset($wordCounts[$word])) {
-                $wordCounts[$word]++;
-            } else {
-                $wordCounts[$word] = 1;
-            }
-        }
-
-        // Sort by frequency (descending)
-        arsort($wordCounts);
-
-        // Take top keywords
-        $keywords = array_slice(array_keys($wordCounts), 0, $maxKeywords);
-
-        // Limit total characters to 255
-        $keywordString = implode(', ', $keywords);
-        if (strlen($keywordString) > 255) {
-            $keywordString = substr($keywordString, 0, 255);
-            $lastComma = strrpos($keywordString, ',');
-            if ($lastComma !== false) {
-                $keywordString = substr($keywordString, 0, $lastComma);
-            }
-        }
-
-        return $keywordString;
-    }
-
-    /**
-     * Generate URL-friendly slug from title
-     */
-    private function generateSlug(string $title): string
-    {
-        // Convert to lowercase
-        $slug = strtolower(trim($title));
-
-        // Replace spaces with hyphens
-        $slug = preg_replace('/\s+/', '-', $slug);
-
-        // Remove special characters
-        $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
-
-        // Remove consecutive hyphens
-        $slug = preg_replace('/-+/', '-', $slug);
-
-        // Trim hyphens from ends
-        $slug = trim($slug, '-');
-
-        // Ensure we have something
-        if (empty($slug)) {
-            $slug = 'article-' . time();
-        }
-
-        // Ensure uniqueness
-        $originalSlug = $slug;
-        $counter = 1;
-
-        while (Article::where('slug', $slug)->exists()) {
-            $slug = $originalSlug . '-' . $counter;
-            $counter++;
-        }
-
-        return $slug;
-    }
-
-    /**
-     * Generate excerpt from content
-     */
-    private function generateExcerpt(string $content, int $length = 200): string
-    {
-        // Handle empty content
-        if (empty(trim($content))) {
-            return '';
-        }
-
-        // Strip HTML tags and decode HTML entities
-        $text = strip_tags($content);
-        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        // Remove extra whitespace
-        $text = preg_replace('/\s+/', ' ', trim($text));
-
-        // If text is already shorter than length, return as is
-        if (strlen($text) <= $length) {
-            return $text;
-        }
-
-        // Trim to specified length
-        $text = substr($text, 0, $length);
-
-        // Find last complete word
-        $lastSpace = strrpos($text, ' ');
-        if ($lastSpace !== false) {
-            $text = substr($text, 0, $lastSpace);
-        }
-
-        // Remove trailing punctuation and add ellipsis
-        $text = rtrim($text, ".,!?-");
-        $text .= '...';
-
-        return $text;
+        return generateExcerpt($data['content'] ?? '');
     }
 
     /**
