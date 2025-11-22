@@ -21,7 +21,6 @@ use Plugs\Utils\FlashMessage;
 use Plugs\Paginator\Paginator;
 use Plugs\Upload\FileUploader;
 use Plugs\Upload\UploadedFile;
-use App\Models\ArticleRevision;
 use App\Models\ArticleCategories;
 use Plugs\Base\Controller\Controller;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -35,7 +34,7 @@ class AdminArticleController extends Controller
     {
         $this->uploader = new FileUploader();
         $this->uploader->usePublicFolder("uploads/articles");
-        $this->uploader->imagesOnly(5 * 1024 * 1024)->setImageDimensions(maxWidth: 2000, maxHeight: 2000);
+        $this->uploader->imagesOnly(5 * 1024 * 1024);
         $this->uploader->disableSecurityFiles();
     }
 
@@ -45,7 +44,6 @@ class AdminArticleController extends Controller
     public function manage(Request $request): Response
     {
         try {
-            // Get query parameters
             $queryParams = $request->getQueryParams();
             $statusFilter = $queryParams['status'] ?? 'all';
             $authorFilter = $queryParams['author'] ?? 'all';
@@ -53,48 +51,43 @@ class AdminArticleController extends Controller
             $perPage = 10;
             $currentPage = (int)($queryParams['page'] ?? 1);
 
-            // Build query with eager loading
-            $articles = Article::with(['author', 'categories']);
+            // Build query - Start with base query
+            $query = Article::with(['author', 'categories']);
 
             // Apply status filter
             if ($statusFilter !== 'all') {
-                $articles = $articles->where('status', $statusFilter);
+                $query = $query->where('status', $statusFilter);
             }
 
             // Apply author filter
             if ($authorFilter !== 'all') {
-                $articles = $articles->where('author_id', (int)$authorFilter);
+                $query = $query->where('author_id', (int)$authorFilter);
             }
 
             // Apply date filter
             if ($dateFilter !== 'all') {
                 switch ($dateFilter) {
                     case 'today':
-                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00'));
+                        $query = $query->where('created_at', '>=', date('Y-m-d 00:00:00'));
                         break;
                     case 'week':
-                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 week')));
+                        $query = $query->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 week')));
                         break;
                     case 'month':
-                        $articles = $articles->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 month')));
+                        $query = $query->where('created_at', '>=', date('Y-m-d 00:00:00', strtotime('-1 month')));
                         break;
                 }
             }
 
-            // Apply sorting - latest first
-            $articles = $articles->orderBy('created_at', 'DESC');
+            // Apply ordering
+            $query = $query->orderBy('created_at', 'DESC');
 
-            // Create paginator
-            $paginator = Paginator::fromQuery($articles, $perPage, $currentPage);
-
-            // Get paginated articles
+            // Create paginator and get results
+            $paginator = Paginator::fromQuery($query, $perPage, $currentPage);
             $articles = $paginator->items();
-
-            // Get categories and authors for filters
-
             $authors = User::all();
 
-            $data = [
+            return $this->view('admin.articles.manage', [
                 'articles' => $articles,
                 'authors' => $authors,
                 'paginator' => $paginator,
@@ -102,14 +95,11 @@ class AdminArticleController extends Controller
                 'author_filter' => $authorFilter,
                 'date_filter' => $dateFilter,
                 'page_title' => 'Manage Articles'
-            ];
-
-            return $this->view('admin.articles.manage', $data);
+            ]);
         } catch (Exception $e) {
             FlashMessage::error('Failed to load articles: ' . $e->getMessage());
             return $this->view('admin.articles.manage', [
                 'articles' => [],
-                'categories' => [],
                 'authors' => [],
                 'paginator' => null,
                 'status_filter' => 'all',
