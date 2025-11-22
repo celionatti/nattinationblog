@@ -188,6 +188,6 @@
 </div>
 
 <div class="post-body">
-    <?= html_entity_decode(nl2br($article->content)) ?>
+    <?= html_entity_decode($article->content) ?>
 </div>
 @endsection
