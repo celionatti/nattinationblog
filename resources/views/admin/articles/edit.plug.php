@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Admin Articles Create')
+@section('title', 'Admin Articles Edit')
 
 @push('styles')
 <!-- Summernote CSS -->
@@ -8,12 +8,13 @@
 @endpush
 
 @section('content')
-<h1 class="page-title">Create New Post</h1>
+<h1 class="page-title">Edit Post</h1>
 <p class="page-subtitle">Write and publish engaging content for your audience.</p>
 
 <!-- Form for PHP handling -->
-<form action="{{ route('admin.articles.store') }}" method="POST" enctype="multipart/form-data" id="postForm">
+<form action="{{ route('admin.articles.update', ['id' => $article->id]) }}" method="POST" enctype="multipart/form-data" id="postForm">
     @csrf
+    @method('PUT')
 
     <!-- Hidden field to determine action -->
     <input type="hidden" name="action" id="formAction" value="draft">
@@ -32,7 +33,7 @@
                             placeholder="Add title"
                             rows="1"
                             autocomplete="off"
-                            style="height: auto;">{{ old('title') }}</textarea>
+                            style="height: auto;">{{ old('title', $article->title) }}</textarea>
                         @error('title')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -47,7 +48,7 @@
                         <textarea
                             id="summernote"
                             name="content"
-                            class="form-control @error('content') is-invalid @enderror">{{ old('content') }}</textarea>
+                            class="form-control @error('content') is-invalid @enderror">{{ old('content', $article->content) }}</textarea>
                         @error('content')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -67,7 +68,7 @@
                             name="excerpt"
                             id="postExcerpt"
                             rows="3"
-                            placeholder="Write a brief excerpt that will appear in post previews...">{{ old('excerpt') }}</textarea>
+                            placeholder="Write a brief excerpt that will appear in post previews...">{{ old('excerpt', $article->excerpt) }}</textarea>
                         <div class="form-text">An optional hand-crafted summary of your post.</div>
                         @error('excerpt')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -86,7 +87,7 @@
                 </div>
                 <div class="editor-card-body">
                     <div class="form-group">
-                        <div class="form-label">Status: <span class="status-badge status-draft">Draft</span></div>
+                        <div class="form-label">Status: <span class="status-badge text-capitalize {{ $article->status === 'draft' ? 'status-draft' : ($article->status === 'published' ? 'status-published' : 'status-archived') }}">{{ old('status', $article->status) }}</span></div>
                         <div class="form-text">Ready to publish</div>
                     </div>
 
@@ -97,7 +98,7 @@
                         </button>
                         <button type="button" class="btn-custom btn-primary" id="publishPost">
                             <i class="bi bi-send"></i>
-                            Publish
+                            {{ $article->status === 'published' ? 'Update' : 'Publish' }}
                         </button>
                     </div>
                 </div>
@@ -120,7 +121,7 @@
                                     <option
                                         value="{{ $category->id }}"
                                         data-color="{{ $category->color }}"
-                                        {{ old('categories') === $category->id ? 'selected' : '' }}>
+                                        {{ old('categories', $article->categories) == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
                                     </option>
                                 <?php endforeach; ?>
@@ -147,18 +148,26 @@
                     <h2 class="editor-card-title">Featured Image</h2>
                 </div>
                 <div class="editor-card-body">
-                    <input type="file" name="featured_image" id="featuredImageInput" accept="image/*"
-                        style="display: none;">
+                    <!-- Hidden input for file upload -->
+                    <input type="file" name="featured_image" id="featuredImageInput" accept="image/*" style="display: none;">
+                    
+                    <!-- Hidden input to track image removal -->
+                    <input type="hidden" name="remove_featured_image" id="removeFeaturedImageInput" value="0">
+                    
                     <div class="featured-image-container" id="featuredImageContainer">
-                        <div class="featured-image-placeholder">
+                        <div class="featured-image-placeholder" style="<?= !empty($article->featured_image) ? 'display: none;' : 'display: flex;' ?></div>">
                             <i class="bi bi-image"></i>
                             <p>Set featured image</p>
                             <p class="text-muted">Click to upload or drag and drop</p>
                         </div>
-                        <img src="" class="featured-image-preview" id="featuredImagePreview" alt="Featured Image">
+                        <img src="{{ $article->featured_image ?? '' }}" 
+                             class="featured-image-preview" 
+                             id="featuredImagePreview" 
+                             alt="Featured Image"
+                             style="<?= !empty($article->featured_image) ? 'display: block;' : 'display: none;' ?>">
                     </div>
 
-                    <div class="featured-image-actions" id="featuredImageActions" style="display: none;">
+                    <div class="featured-image-actions" id="featuredImageActions" style="<?= !empty($article->featured_image) ? 'display: flex;' : 'display: none;' ?>">
                         <button type="button" class="btn-custom btn-secondary" id="changeImage">
                             <i class="bi bi-arrow-repeat"></i>
                             Change
@@ -185,7 +194,7 @@
                             name="seo_title"
                             id="seoTitle"
                             placeholder="SEO optimized title"
-                            value="{{ old('seo_title') }}">
+                            value="{{ old('seo_title', $article->seo_title) }}">
                         <div class="form-text">Recommended: 50-60 characters</div>
                         @error('seo_title')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -198,7 +207,7 @@
                             name="seo_description"
                             id="seoDescription"
                             rows="3"
-                            placeholder="Write a compelling meta description">{{ old('seo_description') }}</textarea>
+                            placeholder="Write a compelling meta description">{{ old('seo_description', $article->seo_description) }}</textarea>
                         <div class="form-text">Recommended: 150-160 characters</div>
                         @error('seo_description')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -206,9 +215,8 @@
                     </div>
                     <div class="seo-preview">
                         <div class="seo-title" id="seoPreviewTitle">Your SEO title will appear here</div>
-                        <div class="seo-url">https://blogname.com/your-post-url</div>
-                        <div class="seo-description" id="seoPreviewDescription">Your meta description will appear here in
-                            search results.</div>
+                        <div class="seo-url">https://blogname.com/{{ old('slug', $article->slug) }}</div>
+                        <div class="seo-description" id="seoPreviewDescription">Your meta description will appear here in search results.</div>
                     </div>
                 </div>
             </div>
@@ -241,11 +249,9 @@
             ],
             callbacks: {
                 onChange: function(contents, $editable) {
-                    // Sync content back to textarea
                     $('#summernote').val(contents);
                 },
                 onInit: function() {
-                    // Initialize with any existing content
                     $('#summernote').val($('#summernote').summernote('code'));
                 }
             }
@@ -253,21 +259,12 @@
 
         // ========== FORM SUBMISSION HANDLING ==========
         $('#postForm').on('submit', function(e) {
-            // Ensure Summernote content is synced before form submission
             const summernoteContent = $('#summernote').summernote('code');
             $('#summernote').val(summernoteContent);
 
-            // Basic client-side validation
             const title = $('#postTitle').val().trim();
             const action = $('#formAction').val();
 
-            // if (!title) {
-            //     e.preventDefault();
-            //     alert('Please add a title to your article.');
-            //     return false;
-            // }
-
-            // Only validate content for publishing
             if (action === 'publish') {
                 const contentText = $(summernoteContent).text().trim();
 
@@ -313,26 +310,17 @@
     const postTitle = document.getElementById('postTitle');
     const postExcerpt = document.getElementById('postExcerpt');
 
-    /**
-     * Update SEO preview in real-time
-     */
     function updateSeoPreview() {
-        // Update SEO title preview
         const titleText = seoTitle.value || postTitle.value || 'Your SEO title will appear here';
         seoPreviewTitle.textContent = titleText;
 
-        // Update SEO description preview
         const descText = seoDescription.value || postExcerpt.value || 'Your meta description will appear here in search results.';
         seoPreviewDescription.textContent = descText;
 
-        // Add character count indicators
         updateCharacterCount(seoTitle, 60, 'seo-title-count');
         updateCharacterCount(seoDescription, 160, 'seo-description-count');
     }
 
-    /**
-     * Update character count helper
-     */
     function updateCharacterCount(element, maxLength, counterId) {
         const currentLength = element.value.length;
         let countElement = document.getElementById(counterId);
@@ -350,13 +338,11 @@
         countElement.style.color = currentLength > maxLength ? '#ef4444' : '#6b7280';
     }
 
-    // Attach event listeners for SEO preview
     if (seoTitle) seoTitle.addEventListener('input', updateSeoPreview);
     if (seoDescription) seoDescription.addEventListener('input', updateSeoPreview);
     if (postTitle) postTitle.addEventListener('input', updateSeoPreview);
     if (postExcerpt) postExcerpt.addEventListener('input', updateSeoPreview);
 
-    // Initialize SEO preview
     updateSeoPreview();
 
     // ========== FEATURED IMAGE HANDLING ==========
@@ -366,6 +352,7 @@
     const featuredImageActions = document.getElementById('featuredImageActions');
     const changeImageBtn = document.getElementById('changeImage');
     const removeImageBtn = document.getElementById('removeImage');
+    const removeFeaturedImageInput = document.getElementById('removeFeaturedImageInput');
 
     if (featuredImageContainer) {
         featuredImageContainer.addEventListener('click', function() {
@@ -387,6 +374,7 @@
             featuredImagePreview.style.display = 'none';
             featuredImageActions.style.display = 'none';
             featuredImageInput.value = '';
+            removeFeaturedImageInput.value = '1';
             featuredImageContainer.querySelector('.featured-image-placeholder').style.display = 'flex';
         });
     }
@@ -395,7 +383,6 @@
         featuredImageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                // Client-side validation
                 const maxSize = 5 * 1024 * 1024; // 5MB
                 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -416,6 +403,7 @@
                     featuredImagePreview.src = e.target.result;
                     featuredImagePreview.style.display = 'block';
                     featuredImageActions.style.display = 'flex';
+                    removeFeaturedImageInput.value = '0';
                     featuredImageContainer.querySelector('.featured-image-placeholder').style.display = 'none';
                 }
                 reader.readAsDataURL(file);

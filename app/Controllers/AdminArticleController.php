@@ -184,10 +184,9 @@ class AdminArticleController extends Controller
             }
 
             // Generate slug from title
-            // $slug = $this->generateSlug($data['title']);
             $slug = generateSlug(
-                $data['title'], 
-                '-', 
+                $data['title'],
+                '-',
                 fn($s) => Article::where('slug', $s)->exists()
             );
 
@@ -233,10 +232,15 @@ class AdminArticleController extends Controller
             $article = Article::create($articleData);
 
             if ($article) {
-                // Create article categories linking
-                $this->createArticleCategories($article, $data['categories']);
+                if ($isPublish) {
+                    // Create article categories linking
+                    $this->createArticleCategories($article, $data['categories']);
+                }
 
-                FlashMessage::success('Article created successfully!');
+                $textStatus = $isPublish ? "created" : "drafted";
+
+                FlashMessage::success("Article {$textStatus} successfully!");
+
 
                 // Redirect based on action
                 if ($data['action'] === 'draft') {
@@ -251,6 +255,213 @@ class AdminArticleController extends Controller
         } catch (Exception $e) {
             FlashMessage::error('Error creating article: ' . $e->getMessage());
             return $this->redirect('/admin/articles/new-article');
+        }
+    }
+
+    public function editArticle(Request $request, $id): Response
+    {
+        try {
+            // Get active categories from database
+            $categories = Category::where('is_active', true)
+                ->orderBy('sort_order', 'ASC')
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            $article = Article::find($id);
+
+            if (!$article) {
+                FlashMessage::error('Article not found');
+                return $this->redirect('/admin/articles');
+            }
+
+            $data = [
+                'page_title' => 'Edit Article',
+                'categories' => $categories,
+                'article' => $article
+            ];
+
+            return $this->view('admin.articles.edit', $data);
+        } catch (Exception $e) {
+            FlashMessage::error('Error loading article: ' . $e->getMessage());
+            return $this->redirect('/admin/articles');
+        }
+    }
+
+    /**
+     * Update existing article
+     */
+    public function update(Request $request, $id): Response
+    {
+        try {
+            $this->currentRequest = $request;
+
+            // Find the article
+            $article = Article::find($id);
+
+            if (!$article) {
+                FlashMessage::error('Article not found');
+                return $this->redirect('/admin/articles');
+            }
+
+            $data = $request->getParsedBody();
+            $isPublish = ($data['action'] ?? '') === 'publish';
+
+            // Validate article data
+            $errors = $this->validateArticleData($request, $isPublish);
+
+            if ($errors->any()) {
+                return $this->back($errors);
+            }
+
+            // Get current user ID
+            $userId = $this->getCurrentUserId($request);
+            if (!$userId) {
+                FlashMessage::error('You must be logged in to update an article.');
+                return $this->redirect("/admin/articles/edit/{$id}");
+            }
+
+            // Handle featured image
+            $featuredImage = $article->featured_image; // Keep existing image by default
+
+            // Check if user wants to remove the image
+            if (isset($data['remove_featured_image']) && $data['remove_featured_image'] == '1') {
+                // Delete old image if exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        // Log but don't fail the update
+                        error_log("Failed to delete old image: " . $e->getMessage());
+                    }
+                }
+                $featuredImage = null;
+            }
+            // Check if new image is uploaded
+            elseif (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
+                // Delete old image if exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        error_log("Failed to delete old image: " . $e->getMessage());
+                    }
+                }
+
+                // Upload new image
+                $file = UploadedFile::createFromFilesArray($_FILES['featured_image']);
+                try {
+                    $uploadResult = $this->uploader->upload($file, null, (string)$userId);
+                    $featuredImage = $uploadResult['url'];
+                } catch (Exception $e) {
+                    FlashMessage::error("Upload failed: " . $e->getMessage());
+                    return $this->redirect("/admin/articles/edit/{$id}");
+                }
+            }
+
+            // Generate excerpt if not provided or empty
+            $excerpt = $this->getExcerpt($data);
+
+            // Generate SEO fields if not provided
+            $seoTitle = !empty(trim($data['seo_title'] ?? ''))
+                ? trim($data['seo_title'])
+                : generateSeoTitle($data['title']);
+
+            $seoDescription = !empty(trim($data['seo_description'] ?? ''))
+                ? trim($data['seo_description'])
+                : generateSeoDescription($data['content'], $data['title']);
+
+            $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
+                ? trim($data['seo_keywords'])
+                : generateSeoKeywords($data['content'], $data['title']);
+
+            // Determine published_at date
+            $publishedAt = $article->published_at; // Keep existing publish date
+
+            // Convert DateTime to string if it's a DateTime object
+            if ($publishedAt instanceof \DateTime) {
+                $publishedAt = $publishedAt->format('Y-m-d H:i:s');
+            }
+
+            // If article is being published for the first time
+            if ($isPublish && $article->status !== 'published' && !$publishedAt) {
+                $publishedAt = date('Y-m-d H:i:s');
+            }
+
+            // Prepare update data
+            $updateData = [
+                'title' => trim($data['title']),
+                'content' => $data['content'],
+                'excerpt' => $excerpt,
+                'categories' => $data['categories'],
+                'featured_image' => $featuredImage,
+                'status' => $isPublish ? 'published' : 'draft',
+                'seo_title' => $seoTitle,
+                'seo_description' => $seoDescription,
+                'seo_keywords' => $seoKeywords,
+                'published_at' => $publishedAt,
+            ];
+
+            // Handle article categories FIRST, before updating the article
+            if (!empty($data['categories'])) {
+                // Always delete existing categories first
+                $this->deleteArticleCategories($article->id);
+
+                // Create new category relationship only if publishing
+                if ($isPublish) {
+                    $this->createArticleCategories($article, $data['categories']);
+                }
+            }
+
+            // Update the article
+            $updated = $article->update($updateData);
+
+            if ($updated) {
+                $textStatus = $isPublish ? "updated" : "saved as draft";
+                FlashMessage::success("Article {$textStatus} successfully!");
+
+                // Redirect based on action
+                if ($data['action'] === 'draft') {
+                    return $this->redirect("/admin/articles/edit/{$article->id}");
+                }
+
+                return $this->redirect('/admin/articles');
+            } else {
+                FlashMessage::error('Failed to update article. Please try again.');
+                return $this->redirect("/admin/articles/edit/{$id}");
+            }
+        } catch (Exception $e) {
+            FlashMessage::error('Error updating article: ' . $e->getMessage());
+            return $this->redirect("/admin/articles/edit/{$id}");
+        }
+    }
+
+    public function showArticle(Request $request): Response
+    {
+        try {
+            $id = $this->param($request, 'id');
+
+            $article = Article::with(['categories', 'author'])->find($id);
+
+            if (!$article) {
+                FlashMessage::error('Article not found');
+                return $this->redirect('/admin/articles');
+            }
+
+            $data = [
+                'page_title' => "{$article->title} Details",
+                'article' => $article
+            ];
+
+            return $this->view('admin.articles.show', $data);
+        } catch (Exception $e) {
+            FlashMessage::error('Error loading article: ' . $e->getMessage());
+            return $this->redirect('/admin/articles');
         }
     }
 
@@ -306,9 +517,51 @@ class AdminArticleController extends Controller
         return $errors;
     }
 
+    /**
+     * Delete article categories for a given article
+     */
+    private function deleteArticleCategories(int $articleId): bool
+    {
+        try {
+            // Method 1: Using the model (safer, respects model logic)
+            $existingCategories = ArticleCategories::where('article_id', $articleId)->get();
+
+            foreach ($existingCategories as $categoryRelation) {
+                $categoryRelation->delete();
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("Failed to delete article categories: " . $e->getMessage());
+
+            // Method 2: Fallback to raw SQL if model method fails
+            try {
+                $connection = ArticleCategories::getPdo();
+                $stmt = $connection->prepare("DELETE FROM article_categories WHERE article_id = ?");
+                $stmt->execute([$articleId]);
+                return true;
+            } catch (Exception $e2) {
+                error_log("Failed to delete article categories with SQL: " . $e2->getMessage());
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Create article category relationship
+     */
     private function createArticleCategories(Article $article, $category): bool
     {
         try {
+            // Check if the relationship already exists to prevent duplicates
+            $exists = ArticleCategories::where('article_id', $article->id)
+                ->where('category_id', $category)
+                ->exists();
+
+            if ($exists) {
+                // Relationship already exists, no need to create
+                return true;
+            }
 
             ArticleCategories::create([
                 'article_id' => $article->id,

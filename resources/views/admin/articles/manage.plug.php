@@ -177,16 +177,9 @@
                                 <a href="{{ route('admin.articles.edit', ['id' => $article->id]) }}" class="action-btn edit" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{{ route('articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" target="_blank" class="action-btn view" title="View">
+                                <a href="{{ route('admin.articles.show', ['id' => $article->id, 'slug' => $article->slug]) }}" class="action-btn view" title="View">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <form method="POST" action="{{ route('admin.articles.toggle-status', ['id' => $article->id]) }}" style="display: inline;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="action-btn status" title="{{ $article->status === 'published' ? 'Unpublish' : 'Publish' }}">
-                                        <i class="bi bi-{{ $article->status === 'published' ? 'eye-slash' : 'eye' }}"></i>
-                                    </button>
-                                </form>
                                 <form method="POST" action="{{ route('admin.articles.destroy', ['id' => $article->id]) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this article?')">
                                     @csrf
                                     @method('DELETE')

@@ -1215,6 +1215,11 @@ textarea.form-control {
   color: var(--info);
 }
 
+.status-archived {
+  background-color: rgba(96, 100, 100, 0.1);
+  color: var(--text-secondary);
+}
+
 .action-buttons {
   display: flex;
   gap: 0.5rem;
@@ -1247,6 +1252,50 @@ textarea.form-control {
 
 .action-btn.delete:hover {
   color: var(--danger);
+}
+
+.title-container {
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+}
+
+.title-input {
+  font-size: 1.5rem;
+  font-weight: 700;
+  border: none;
+  padding: 0;
+  background: transparent;
+  resize: none;
+  min-height: 40px;
+  height: auto;
+  overflow: hidden;
+  width: 100%;
+  line-height: 1.3;
+}
+
+.title-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ========== FORM VALIDATION STYLES ========== */
+.is-invalid {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+}
+
+.category-badge {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
 }
 
 /* ========== ADD CATEGORY CARD ========== */
@@ -1466,6 +1515,14 @@ textarea.form-control {
     width: 100%;
     justify-content: space-between;
   }
+
+  .post-title {
+    font-size: 2rem;
+  }
+
+  .post-featured-image {
+    height: 300px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1563,6 +1620,29 @@ textarea.form-control {
     width: 100%;
     justify-content: center;
   }
+
+  .post-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .post-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .post-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .post-actions {
+    flex-wrap: wrap;
+  }
+
+  .posts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 576px) {
@@ -1630,6 +1710,18 @@ textarea.form-control {
   .category-preview {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .post-title {
+    font-size: 1.75rem;
+  }
+
+  .post-featured-image {
+    height: 200px;
+  }
+
+  .post-body {
+    font-size: 1rem;
   }
 }
 

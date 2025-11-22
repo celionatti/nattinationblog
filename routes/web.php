@@ -99,11 +99,11 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::post('/articles/create', [AdminArticleController::class, 'store'])->name('admin.articles.store');
 
-    Route::get('/articles/edit/{id}', [AdminArticleController::class, 'newArticle'])->name('admin.articles.edit');
+    Route::get('/articles/edit/{id}', [AdminArticleController::class, 'editArticle'])->name('admin.articles.edit');
 
-    Route::put('/articles/edit/{id}', [AdminArticleController::class, 'newArticle'])->name('admin.articles.update');
+    Route::put('/articles/edit/{id}', [AdminArticleController::class, 'update'])->name('admin.articles.update');
 
-    Route::get('/articles/show/{id}', [AdminArticleController::class, 'newArticle'])->name('admin.articles.show');
+    Route::get('/articles/show/{id}', [AdminArticleController::class, 'showArticle'])->name('admin.articles.show');
 
     // Admin Settings Route
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
