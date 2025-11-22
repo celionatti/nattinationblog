@@ -494,19 +494,28 @@ class AdminArticleController extends Controller
             $errors->add('excerpt', 'Excerpt must not exceed 500 characters');
         }
 
-        // SEO title validation
-        if (!empty($data['seo_title']) && strlen($data['seo_title']) > 60) {
-            $errors->add('seo_title', 'SEO title should not exceed 60 characters');
+        // SEO title validation - ONLY if user actually entered something
+        if (!empty($data['seo_title'])) {
+            $seoTitleLength = strlen(trim($data['seo_title']));
+            if ($seoTitleLength > 60) {
+                $errors->add('seo_title', 'SEO title should not exceed 60 characters (currently ' . $seoTitleLength . ' characters)');
+            }
         }
 
-        // SEO description validation
-        if (!empty($data['seo_description']) && strlen($data['seo_description']) > 160) {
-            $errors->add('seo_description', 'SEO description should not exceed 160 characters');
+        // SEO description validation - ONLY if user actually entered something
+        if (!empty($data['seo_description'])) {
+            $seoDescLength = strlen(trim($data['seo_description']));
+            if ($seoDescLength > 160) {
+                $errors->add('seo_description', 'SEO description should not exceed 160 characters (currently ' . $seoDescLength . ' characters)');
+            }
         }
 
-        // SEO keywords validation
-        if (!empty($data['seo_keywords']) && strlen($data['seo_keywords']) > 255) {
-            $errors->add('seo_keywords', 'SEO keywords should not exceed 255 characters');
+        // SEO keywords validation - ONLY if user actually entered something
+        if (!empty($data['seo_keywords'])) {
+            $seoKeywordsLength = strlen(trim($data['seo_keywords']));
+            if ($seoKeywordsLength > 255) {
+                $errors->add('seo_keywords', 'SEO keywords should not exceed 255 characters (currently ' . $seoKeywordsLength . ' characters)');
+            }
         }
 
         // Category validation (optional but recommended for publishing)
