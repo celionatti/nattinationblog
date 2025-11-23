@@ -22,7 +22,7 @@ use App\Controllers\ArticleController;
 use App\Controllers\AdminArticleController;
 use App\Controllers\AdminSettingController;
 use App\Controllers\AdminCategoryController;
-
+use App\Controllers\AdminEventController;
 
 // Route::get('/home', [HomeController::class, 'index']);
 // Route::get('/', [HomeController::class, 'index'])->name('home')->middleware('auth');
@@ -105,7 +105,28 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::get('/articles/show/{id}', [AdminArticleController::class, 'showArticle'])->name('admin.articles.show');
 
-    // Admin Settings Route
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Events
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/events', [AdminEventController::class, 'manage'])->name('admin.events.index');
+
+    Route::get('/events/create', [AdminEventController::class, 'create'])->name('admin.events.create');
+
+    Route::post('/events/create', [AdminEventController::class, 'store'])->name('admin.events.store');
+
+    Route::get('/events/detail/{id}', [AdminEventController::class, 'show'])->name('admin.events.show');
+
+    Route::get('/events/edit/{id}', [AdminEventController::class, 'create'])->name('admin.events.edit');
+
+    Route::delete('/events/delete/{id}', [AdminEventController::class, 'create'])->name('admin.events.destroy');
+
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Settings
+    * -------------------------------------------------------------------------------
+    */
     Route::get('/settings', [AdminSettingController::class, 'manage'])->name('admin.settings');
 });
 

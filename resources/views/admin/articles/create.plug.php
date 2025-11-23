@@ -261,11 +261,11 @@
             const title = $('#postTitle').val().trim();
             const action = $('#formAction').val();
 
-            // if (!title) {
-            //     e.preventDefault();
-            //     alert('Please add a title to your article.');
-            //     return false;
-            // }
+            if (!title) {
+                e.preventDefault();
+                alert('Please add a title to your article.');
+                return false;
+            }
 
             // Only validate content for publishing
             if (action === 'publish') {
