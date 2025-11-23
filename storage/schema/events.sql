@@ -1,0 +1,20 @@
+CREATE TABLE events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    content TEXT,
+    event_date DATE NOT NULL,
+    event_time TIME NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    event_type ENUM('free', 'paid') DEFAULT 'free',
+    featured_image VARCHAR(500) NULL,
+    status ENUM('pending', 'launched', 'cancelled') DEFAULT 'pending',
+    author_id INT NOT NULL,
+    seo_title VARCHAR(255),
+    seo_description TEXT,
+    seo_keywords TEXT,
+    published_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
