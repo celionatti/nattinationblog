@@ -14,10 +14,10 @@ namespace App\Controllers;
 use Exception;
 use App\Models\User;
 use App\Models\Event;
-use App\Models\EventType;
+use App\Models\Category;
 use App\Models\EventTicket;
-use Plugs\View\ErrorMessage;
 use App\Models\EventDiscount;
+use Plugs\View\ErrorMessage;
 use Plugs\Utils\FlashMessage;
 use Plugs\Paginator\Paginator;
 use Plugs\Upload\FileUploader;
@@ -38,7 +38,10 @@ class AdminEventController extends Controller
         $this->uploader->disableSecurityFiles();
     }
 
-    public function manage(Request $request)
+    /**
+     * Display event management page
+     */
+    public function manage(Request $request): Response
     {
         try {
             $queryParams = $request->getQueryParams();
@@ -105,11 +108,14 @@ class AdminEventController extends Controller
         }
     }
 
-    public function create(Request $request)
+    /**
+     * Display new event form
+     */
+    public function create(Request $request): Response
     {
         try {
             // Get active categories from database
-            $categories = EventType::where('is_active', true)
+            $categories = Category::where('is_active', true)
                 ->orderBy('sort_order', 'ASC')
                 ->orderBy('name', 'ASC')
                 ->get();
@@ -127,16 +133,19 @@ class AdminEventController extends Controller
         }
     }
 
-    public function store(Request $request)
+    /**
+     * Store new event
+     */
+    public function store(Request $request): Response
     {
         try {
             $this->currentRequest = $request;
 
             $data = $request->getParsedBody();
-            $action = $data['action'] ?? 'pending';
-            $isLaunch = $action === 'launch';
+            $action = $data['action'] ?? 'draft';
+            $isPublish = $action === 'publish';
 
-            $errors = $this->validateEventData($request, $isLaunch);
+            $errors = $this->validateEventData($request, $isPublish);
 
             // If validation fails, redirect back with errors
             if ($errors->any()) {
@@ -151,12 +160,12 @@ class AdminEventController extends Controller
             }
 
             // Handle featured image upload
-            $eventImage = null;
+            $featuredImage = null;
             if (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
                 $file = UploadedFile::createFromFilesArray($_FILES['event_image']);
                 try {
                     $uploadResult = $this->uploader->upload($file, null, (string)$userId);
-                    $eventImage = $uploadResult['url'];
+                    $featuredImage = $uploadResult['url'];
                 } catch (Exception $e) {
                     FlashMessage::error("Upload failed: " . $e->getMessage());
                     return $this->redirect("/admin/events/create");
@@ -185,7 +194,7 @@ class AdminEventController extends Controller
 
             // Determine published_at date
             $publishedAt = null;
-            if ($isLaunch) {
+            if ($isPublish) {
                 $publishedAt = date('Y-m-d H:i:s');
             }
 
@@ -198,8 +207,8 @@ class AdminEventController extends Controller
                 'event_time' => $data['event_time'],
                 'location' => trim($data['location']),
                 'event_type' => $data['event_type'],
-                'event_image' => $eventImage,
-                'status' => $isLaunch ? "launched" : 'pending',
+                'featured_image' => $featuredImage,
+                'status' => $isPublish ? "published" : 'draft',
                 'author_id' => $userId,
                 'seo_title' => $seoTitle,
                 'seo_description' => $seoDescription,
@@ -230,11 +239,11 @@ class AdminEventController extends Controller
                         $this->createEventCategories($event, $data['categories']);
                     }
 
-                    $textStatus = $isLaunch ? "launched" : "saved as pending";
+                    $textStatus = $isPublish ? "published" : "saved as draft";
                     FlashMessage::success("Event {$textStatus} successfully!");
 
                     // Redirect based on action
-                    if ($action === 'pending') {
+                    if ($action === 'draft') {
                         return $this->redirect("/admin/events/edit/{$event->id}");
                     }
 
@@ -257,9 +266,197 @@ class AdminEventController extends Controller
     }
 
     /**
+     * Display edit event form
+     */
+    public function edit(Request $request, $id): Response
+    {
+        try {
+            $event = Event::with(['tickets', 'discount', 'categories'])->find($id);
+
+            if (!$event) {
+                FlashMessage::error('Event not found');
+                return $this->redirect('/admin/events');
+            }
+
+            // Get active categories from database
+            $categories = Category::where('is_active', true)
+                ->orderBy('sort_order', 'ASC')
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            return $this->view('admin.events.edit', [
+                'event' => $event,
+                'categories' => $categories,
+                'page_title' => 'Edit Event'
+            ]);
+        } catch (Exception $e) {
+            FlashMessage::error('Error loading event: ' . $e->getMessage());
+            return $this->redirect('/admin/events');
+        }
+    }
+
+    /**
+     * Update existing event
+     */
+    public function update(Request $request, $id): Response
+    {
+        try {
+            $this->currentRequest = $request;
+
+            // Find the event
+            $event = Event::find($id);
+
+            if (!$event) {
+                FlashMessage::error('Event not found');
+                return $this->redirect('/admin/events');
+            }
+
+            $data = $request->getParsedBody();
+            $action = $data['action'] ?? 'draft';
+            $isPublish = $action === 'publish';
+
+            // Validate event data
+            $errors = $this->validateEventData($request, $isPublish);
+
+            if ($errors->any()) {
+                return $this->back($errors);
+            }
+
+            // Get current user ID
+            $userId = $this->getCurrentUserId($request);
+            if (!$userId) {
+                FlashMessage::error('You must be logged in to update an event.');
+                return $this->redirect("/admin/events/edit/{$id}");
+            }
+
+            // Handle featured image
+            $featuredImage = $event->featured_image; // Keep existing image by default
+
+            // Check if user wants to remove the image
+            if (isset($data['remove_event_image']) && $data['remove_event_image'] == '1') {
+                // Delete old image if exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        // Log but don't fail the update
+                        error_log("Failed to delete old image: " . $e->getMessage());
+                    }
+                }
+                $featuredImage = null;
+            }
+            // Check if new image is uploaded
+            elseif (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
+                // Delete old image if exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        error_log("Failed to delete old image: " . $e->getMessage());
+                    }
+                }
+
+                // Upload new image
+                $file = UploadedFile::createFromFilesArray($_FILES['event_image']);
+                try {
+                    $uploadResult = $this->uploader->upload($file, null, (string)$userId);
+                    $featuredImage = $uploadResult['url'];
+                } catch (Exception $e) {
+                    FlashMessage::error("Upload failed: " . $e->getMessage());
+                    return $this->redirect("/admin/events/edit/{$id}");
+                }
+            }
+
+            // Generate SEO fields if not provided
+            $seoTitle = !empty(trim($data['seo_title'] ?? ''))
+                ? trim($data['seo_title'])
+                : generateSeoTitle($data['title']);
+
+            $seoDescription = !empty(trim($data['seo_description'] ?? ''))
+                ? trim($data['seo_description'])
+                : generateSeoDescription($data['content'], $data['title']);
+
+            $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
+                ? trim($data['seo_keywords'])
+                : generateSeoKeywords($data['content'], $data['title']);
+
+            // Determine published_at date
+            $publishedAt = $event->published_at;
+            if ($publishedAt instanceof \DateTime) {
+                $publishedAt = $publishedAt->format('Y-m-d H:i:s');
+            }
+
+            // If event is being published for the first time
+            if ($isPublish && $event->status !== 'published' && !$publishedAt) {
+                $publishedAt = date('Y-m-d H:i:s');
+            }
+
+            // Prepare update data
+            $updateData = [
+                'title' => trim($data['title']),
+                'content' => $data['content'],
+                'event_date' => $data['event_date'],
+                'event_time' => $data['event_time'],
+                'location' => trim($data['location']),
+                'event_type' => $data['event_type'],
+                'featured_image' => $featuredImage,
+                'status' => $isPublish ? 'published' : 'draft',
+                'seo_title' => $seoTitle,
+                'seo_description' => $seoDescription,
+                'seo_keywords' => $seoKeywords,
+                'published_at' => $publishedAt,
+            ];
+
+            // Update the event
+            $updated = $event->update($updateData);
+
+            if ($updated) {
+                // Update tickets
+                if ($data['event_type'] === 'paid' && isset($data['tickets'])) {
+                    $this->updateEventTickets($event, $data['tickets']);
+                } else {
+                    // Remove all tickets if event type changed to free
+                    $event->tickets()->delete();
+                }
+
+                // Update discount
+                $promoData = $data['promo'] ?? [];
+                $this->updateEventDiscount($event, $promoData);
+
+                // Update categories
+                if (!empty($data['categories'])) {
+                    $this->updateEventCategories($event, $data['categories']);
+                }
+
+                $textStatus = $isPublish ? "published" : "saved as draft";
+                FlashMessage::success("Event {$textStatus} successfully!");
+
+                // Redirect based on action
+                if ($action === 'draft') {
+                    return $this->redirect("/admin/events/edit/{$event->id}");
+                }
+
+                return $this->redirect('/admin/events');
+            } else {
+                FlashMessage::error('Failed to update event. Please try again.');
+                return $this->redirect("/admin/events/edit/{$id}");
+            }
+        } catch (Exception $e) {
+            FlashMessage::error('Error updating event: ' . $e->getMessage());
+            return $this->redirect("/admin/events/edit/{$id}");
+        }
+    }
+
+    /**
      * Validate event data
      */
-    private function validateEventData($request, bool $isLaunching = false): ErrorMessage
+    private function validateEventData($request, bool $isPublishing = false): ErrorMessage
     {
         $data = $request->getParsedBody();
         $errors = new ErrorMessage();
@@ -291,8 +488,8 @@ class AdminEventController extends Controller
             $errors->add('location', 'Event location is required');
         }
 
-        // Content validation (stricter for launching)
-        if ($isLaunching) {
+        // Content validation (stricter for publishing)
+        if ($isPublishing) {
             if (empty($data['content'])) {
                 $errors->add('content', 'Event description is required');
             } elseif (strlen(strip_tags($data['content'])) < 50) {
@@ -301,7 +498,7 @@ class AdminEventController extends Controller
         }
 
         // Tickets validation for paid events when publishing
-        if ($isLaunching && $data['event_type'] === 'paid') {
+        if ($isPublishing && $data['event_type'] === 'paid') {
             if (empty($data['tickets']) || !is_array($data['tickets'])) {
                 $errors->add('tickets', 'At least one ticket type is required for paid events');
             } else {
@@ -478,7 +675,7 @@ class AdminEventController extends Controller
     private function createEventCategories(Event $event, $categoryId): bool
     {
         try {
-            $event->event_types()->attach($categoryId);
+            $event->categories()->attach($categoryId);
             return true;
         } catch (Exception $e) {
             error_log("Failed to create event categories: " . $e->getMessage());
@@ -492,7 +689,7 @@ class AdminEventController extends Controller
     private function updateEventCategories(Event $event, $categoryId): bool
     {
         try {
-            $event->event_types()->sync([$categoryId]);
+            $event->categories()->sync([$categoryId]);
             return true;
         } catch (Exception $e) {
             error_log("Failed to update event categories: " . $e->getMessage());
@@ -545,5 +742,48 @@ class AdminEventController extends Controller
         $userId = $_SESSION['user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['admin_id'] ?? null;
 
         return $userId ? (int) $userId : null;
+    }
+
+    /**
+     * Delete event
+     */
+    public function destroy(Request $request, $id): Response
+    {
+        try {
+            $event = Event::with(['tickets', 'discount'])->find($id);
+
+            if (!$event) {
+                FlashMessage::error('Event not found');
+                return $this->redirect('/admin/events');
+            }
+
+            // Store featured image path before deletion
+            $featuredImage = $event->featured_image;
+
+            // Delete the event (this should cascade delete tickets and discount)
+            if ($event->delete()) {
+                // Delete associated image if it exists
+                if ($featuredImage) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($featuredImage);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        // Don't fail the whole operation if image deletion fails
+                        error_log("Failed to delete event image: " . $e->getMessage());
+                    }
+                }
+
+                FlashMessage::success('Event deleted successfully');
+            } else {
+                FlashMessage::error('Failed to delete event');
+            }
+
+            return $this->redirect('/admin/events');
+        } catch (Exception $e) {
+            FlashMessage::error('Error deleting event: ' . $e->getMessage());
+            return $this->redirect('/admin/events');
+        }
     }
 }

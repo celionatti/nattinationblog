@@ -12,14 +12,6 @@
         <i class="bi bi-plus-lg"></i>
         New Event
     </button>
-    <button type="button" onclick="window.location.href='<?= route('admin.events.create') ?>'" class="btn-custom btn-success text-decoration-none" id="upcomingEventBtn">
-        <i class="bi bi-sort-up"></i>
-        Upcoming Events
-    </button>
-    <button type="button" onclick="window.location.href='<?= route('admin.events.create') ?>'" class="btn-custom btn-info" id="concludedEventBtn">
-        <i class="bi bi-sort-down"></i>
-        Concluded Events
-    </button>
 </div>
 
 <div class="table-card">

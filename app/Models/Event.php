@@ -32,7 +32,7 @@ class Event extends PlugModel
         'event_time',
         'location',
         'event_type',
-        'featured_image',
+        'event_image',
         'status',
         'author_id',
         'seo_title',

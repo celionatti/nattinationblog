@@ -9,6 +9,14 @@
     .featured-image-actions {
         display: none;
     }
+
+    .discount-fields {
+        display: none;
+    }
+
+    .discount-fields.active {
+        display: block;
+    }
 </style>
 @endpush
 
@@ -18,7 +26,7 @@
     <p class="page-subtitle">Host new and engaging events for your audience.</p>
 </div>
 
-<form action="" method="post">
+<form action="{{ route('admin.events.store') }}" method="post" id="eventForm" enctype="multipart/form-data">
     @csrf
 
     <!-- Hidden field to determine action -->
@@ -146,7 +154,7 @@
                 <div class="editor-card-body">
                     <div class="discount-toggle">
                         <label class="switch">
-                            <input type="checkbox" id="enableDiscount">
+                            <input type="checkbox" id="enableDiscount" name="promo[enabled]" value="1">
                             <span class="slider"></span>
                         </label>
                         <label for="enableDiscount" style="cursor: pointer; font-weight: 600; font-size: 14px;">Enable Promo Code</label>
@@ -155,12 +163,12 @@
                     <div class="discount-fields" id="discountFields">
                         <div class="form-group">
                             <label class="form-label">Promo Code</label>
-                            <input type="text" name="promo_code" class="form-control" placeholder="e.g., EARLY2024" style="text-transform: uppercase;">
+                            <input type="text" name="promo[code]" class="form-control" placeholder="e.g., EARLY2024" style="text-transform: uppercase;">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Discount Type</label>
-                            <select name="discount_type" class="form-select" id="discountType">
+                            <select name="promo[discount_type]" class="form-select" id="discountType">
                                 <option value="percentage">Percentage (%)</option>
                                 <option value="fixed">Fixed Amount</option>
                             </select>
@@ -168,17 +176,17 @@
 
                         <div class="form-group">
                             <label class="form-label">Discount Value</label>
-                            <input type="number" name="discount_value" class="form-control" placeholder="e.g., 10" min="0" step="0.01">
+                            <input type="number" name="promo[discount_value]" class="form-control" placeholder="e.g., 10" min="0" step="0.01">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Valid Until (Optional)</label>
-                            <input type="date" name="promo_valid_until" class="form-control">
+                            <input type="date" name="promo[valid_until]" class="form-control">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Usage Limit (Optional)</label>
-                            <input type="number" name="promo_usage_limit" class="form-control" placeholder="Leave empty for unlimited" min="1">
+                            <input type="number" name="promo[usage_limit]" class="form-control" placeholder="Leave empty for unlimited" min="1">
                         </div>
                     </div>
                 </div>
@@ -195,18 +203,18 @@
                 </div>
                 <div class="editor-card-body">
                     <div class="form-group">
-                        <div class="form-label">Status: <span class="status-badge status-draft">Draft</span></div>
-                        <div class="form-text">Ready to publish</div>
+                        <div class="form-label">Status: <span class="status-badge status-draft">Pending</span></div>
+                        <div class="form-text">Ready to launch</div>
                     </div>
 
                     <div class="publish-actions">
-                        <button type="button" class="btn-custom btn-secondary" id="saveDraft">
+                        <button type="button" class="btn-custom btn-secondary" id="savePending">
                             <i class="bi bi-file-earmark"></i>
-                            Save Draft
+                            Save Pending
                         </button>
-                        <button type="button" class="btn-custom btn-primary" id="publishPost">
+                        <button type="button" class="btn-custom btn-primary" id="launchEvent">
                             <i class="bi bi-send"></i>
-                            Publish
+                            Launch
                         </button>
                     </div>
                 </div>
@@ -342,6 +350,7 @@
                 $('#discountFields').removeClass('active');
                 // Clear discount fields
                 $('#discountFields input, #discountFields select').val('');
+                $('#enableDiscount').prop('checked', false);
             }
         });
 
@@ -392,6 +401,24 @@
                 }
             }
 
+            // Validate promo fields if enabled
+            if ($('#enableDiscount').is(':checked')) {
+                const promoCode = $('input[name="promo[code]"]').val().trim();
+                const discountValue = $('input[name="promo[discount_value]"]').val();
+
+                if (!promoCode) {
+                    e.preventDefault();
+                    alert('Please enter a promo code.');
+                    return false;
+                }
+
+                if (!discountValue) {
+                    e.preventDefault();
+                    alert('Please enter a discount value.');
+                    return false;
+                }
+            }
+
             // Validate content for publishing
             if (action === 'launch') {
                 const contentText = $(summernoteContent).text().trim();
@@ -402,16 +429,19 @@
                     return false;
                 }
             }
+
+            // If validation passes, form will submit normally to PHP controller
+            return true;
         });
 
         // ========== SAVE DRAFT BUTTON ==========
-        $('#saveDraft').on('click', function() {
-            $('#formAction').val('draft');
+        $('#savePending').on('click', function() {
+            $('#formAction').val('pending');
             $('#eventForm').submit();
         });
 
         // ========== PUBLISH BUTTON ==========
-        $('#publishPost').on('click', function() {
+        $('#launchEvent').on('click', function() {
             $('#formAction').val('launch');
             $('#eventForm').submit();
         });
