@@ -475,10 +475,24 @@ class AdminEventController extends Controller
     /**
      * Create event categories
      */
-    private function createEventCategories(Event $event, $categoryId): bool
+    private function createEventCategories(Event $event, $categoryIds): bool
     {
         try {
-            $event->event_types()->attach($categoryId);
+            // Handle both single category and array of categories
+            if (empty($categoryIds)) {
+                return true; // No categories to attach
+            }
+
+            // Convert to array if single value
+            $ids = is_array($categoryIds) ? $categoryIds : [$categoryIds];
+
+            // Remove empty values
+            $ids = array_filter($ids);
+
+            if (!empty($ids)) {
+                $event->event_types()->attach($ids);
+            }
+
             return true;
         } catch (Exception $e) {
             error_log("Failed to create event categories: " . $e->getMessage());
@@ -489,10 +503,25 @@ class AdminEventController extends Controller
     /**
      * Update event categories
      */
-    private function updateEventCategories(Event $event, $categoryId): bool
+    private function updateEventCategories(Event $event, $categoryIds): bool
     {
         try {
-            $event->event_types()->sync([$categoryId]);
+            // Handle both single category and array of categories
+            if (empty($categoryIds)) {
+                // Remove all categories if none provided
+                $event->event_types()->detach();
+                return true;
+            }
+
+            // Convert to array if single value
+            $ids = is_array($categoryIds) ? $categoryIds : [$categoryIds];
+
+            // Remove empty values
+            $ids = array_filter($ids);
+
+            // Sync will remove old and add new categories
+            $event->event_types()->sync($ids);
+
             return true;
         } catch (Exception $e) {
             error_log("Failed to update event categories: " . $e->getMessage());

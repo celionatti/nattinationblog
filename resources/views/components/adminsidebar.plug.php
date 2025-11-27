@@ -58,12 +58,6 @@
                 Events
             </a>
         </li>
-        <li class="sidebar-nav-item" id="event-create">
-            <a href="{{ url('admin/events/create#event-create') }}" class="sidebar-nav-link {{ activeClass('/admin/events/create', exact: true) }}">
-                <i class="bi bi-calendar2-plus"></i>
-                Create Event
-            </a>
-        </li>
         <li class="sidebar-nav-item" id="tickets">
             <a href="{{ url('admin/events/tickets#tickets') }}" class="sidebar-nav-link {{ activeClass('/admin/tickets') }}">
                 <i class="bi bi-ticket-detailed"></i>
