@@ -14,6 +14,7 @@ namespace App\Controllers;
 use Exception;
 use App\Models\User;
 use App\Models\Event;
+use App\Models\EventCategories;
 use App\Models\EventType;
 use App\Models\EventTicket;
 use Plugs\View\ErrorMessage;
@@ -475,56 +476,27 @@ class AdminEventController extends Controller
     /**
      * Create event categories
      */
-    private function createEventCategories(Event $event, $categoryIds): bool
+    private function createEventCategories(Event $event, $category): bool
     {
         try {
-            // Handle both single category and array of categories
-            if (empty($categoryIds)) {
-                return true; // No categories to attach
+            // Check if the relationship already exists to prevent duplicates
+            $exists = EventCategories::where('event_id', $event->id)
+                ->where('type_id', $category)
+                ->exists();
+
+            if ($exists) {
+                // Relationship already exists, no need to create
+                return true;
             }
 
-            // Convert to array if single value
-            $ids = is_array($categoryIds) ? $categoryIds : [$categoryIds];
-
-            // Remove empty values
-            $ids = array_filter($ids);
-
-            if (!empty($ids)) {
-                $event->event_types()->attach($ids);
-            }
+            EventCategories::create([
+                'event_id' => $event->id,
+                'type_id' => $category
+            ]);
 
             return true;
         } catch (Exception $e) {
             error_log("Failed to create event categories: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Update event categories
-     */
-    private function updateEventCategories(Event $event, $categoryIds): bool
-    {
-        try {
-            // Handle both single category and array of categories
-            if (empty($categoryIds)) {
-                // Remove all categories if none provided
-                $event->event_types()->detach();
-                return true;
-            }
-
-            // Convert to array if single value
-            $ids = is_array($categoryIds) ? $categoryIds : [$categoryIds];
-
-            // Remove empty values
-            $ids = array_filter($ids);
-
-            // Sync will remove old and add new categories
-            $event->event_types()->sync($ids);
-
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to update event categories: " . $e->getMessage());
             return false;
         }
     }

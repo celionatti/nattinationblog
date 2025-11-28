@@ -19,10 +19,11 @@ use App\Controllers\AuthController;
 use App\Controllers\HomeController;
 use App\Controllers\AdminController;
 use App\Controllers\ArticleController;
+use App\Controllers\AdminEventController;
 use App\Controllers\AdminArticleController;
 use App\Controllers\AdminSettingController;
 use App\Controllers\AdminCategoryController;
-use App\Controllers\AdminEventController;
+use App\Controllers\AdminEventTypeController;
 
 // Route::get('/home', [HomeController::class, 'index']);
 // Route::get('/', [HomeController::class, 'index'])->name('home')->middleware('auth');
@@ -104,6 +105,24 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     Route::put('/articles/edit/{id}', [AdminArticleController::class, 'update'])->name('admin.articles.update');
 
     Route::get('/articles/show/{id}', [AdminArticleController::class, 'showArticle'])->name('admin.articles.show');
+
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Event Types
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/event-types', [AdminEventTypeController::class, 'manage'])->name('admin.event-type.index');
+
+    Route::get('/event-types/create', [AdminEventTypeController::class, 'newType'])->name('admin.event-type.show');
+
+    Route::post('/event-types/create', [AdminEventTypeController::class, 'store'])->name('admin.event-type.store');
+
+    Route::get('/event-types/edit/{id}', [AdminEventTypeController::class, 'edit'])->name('admin.event-type.edit');
+
+    Route::put('/event-types/update/{id}', [AdminEventTypeController::class, 'update'])->name('admin.event-type.update');
+
+    Route::delete('/event-types/delete/{id}', [AdminEventTypeController::class, 'delete'])->name('admin.event-type.delete');
+
 
     /*
     * -------------------------------------------------------------------------------
