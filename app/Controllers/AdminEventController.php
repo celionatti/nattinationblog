@@ -271,7 +271,7 @@ class AdminEventController extends Controller
 
             $data = $request->getParsedBody();
             $action = $data['action'] ?? 'pending';
-            $isPublish = $action === 'launched';
+            $isPublish = $action === 'launch';
 
             // Validate event data
             $errors = $this->validateEventData($request, $isPublish);
@@ -288,7 +288,7 @@ class AdminEventController extends Controller
             }
 
             // Handle featured image
-            $featuredImage = $event->featured_image; // Keep existing image by default
+            $featuredImage = $event->event_image; // Keep existing image by default
 
             // Check if user wants to remove the image
             if (isset($data['remove_event_image']) && $data['remove_event_image'] == '1') {
@@ -363,8 +363,8 @@ class AdminEventController extends Controller
                 'event_time' => $data['event_time'],
                 'location' => trim($data['location']),
                 'event_type' => $data['event_type'],
-                'featured_image' => $featuredImage,
-                'status' => $isPublish ? 'published' : 'draft',
+                'event_image' => $featuredImage,
+                'status' => $isPublish ? 'launched' : 'pending',
                 'seo_title' => $seoTitle,
                 'seo_description' => $seoDescription,
                 'seo_keywords' => $seoKeywords,
@@ -380,7 +380,13 @@ class AdminEventController extends Controller
                     $this->updateEventTickets($event, $data['tickets']);
                 } else {
                     // Remove all tickets if event type changed to free
-                    $event->tickets()->delete();
+                    // $event->tickets()->delete();
+                    $tickets = $event->tickets;
+                    if ($tickets && $tickets->count() > 0) {
+                        foreach ($tickets as $ticket) {
+                            $ticket->delete();
+                        }
+                    }
                 }
 
                 // Update discount
@@ -460,6 +466,7 @@ class AdminEventController extends Controller
             if (empty($data['tickets']) || !is_array($data['tickets'])) {
                 $errors->add('tickets', 'At least one ticket type is required for paid events');
             } else {
+                $hasValidTicket = false;
                 foreach ($data['tickets'] as $ticketId => $ticket) {
                     if (empty(trim($ticket['name'] ?? ''))) {
                         $errors->add("tickets.{$ticketId}.name", 'Ticket name is required');
@@ -474,6 +481,15 @@ class AdminEventController extends Controller
                     } elseif ($ticket['quantity'] < 1) {
                         $errors->add("tickets.{$ticketId}.quantity", 'Ticket quantity must be at least 1');
                     }
+
+                    // If we have at least one valid ticket, mark as having valid tickets
+                    if (!empty(trim($ticket['name'] ?? '')) && isset($ticket['price']) && $ticket['price'] >= 0 && isset($ticket['quantity']) && $ticket['quantity'] >= 1) {
+                        $hasValidTicket = true;
+                    }
+                }
+
+                if (!$hasValidTicket) {
+                    $errors->add('tickets', 'At least one valid ticket type is required for paid events');
                 }
             }
         }
@@ -522,17 +538,26 @@ class AdminEventController extends Controller
     }
 
     /**
-     * Update event tickets
+     * Update event tickets - ALTERNATIVE APPROACH
+     * Uses individual deletes instead of whereIn
      */
     private function updateEventTickets(Event $event, array $tickets): bool
     {
         try {
-            // Get existing ticket IDs
-            $existingTicketIds = $event->tickets->pluck('id')->toArray();
+            // Get all existing ticket IDs from database
+            $existingTickets = $event->tickets;
+            $existingTicketIds = $existingTickets->pluck('id')->toArray();
             $updatedTicketIds = [];
 
+            // Process each ticket from the form
             foreach ($tickets as $ticketId => $ticketData) {
-                if (is_numeric($ticketId)) {
+                // Skip empty ticket data
+                if (empty($ticketData['name']) && empty($ticketData['price']) && empty($ticketData['quantity'])) {
+                    continue;
+                }
+
+                // Check if this is an existing ticket
+                if (is_numeric($ticketId) && in_array((int)$ticketId, $existingTicketIds)) {
                     // Update existing ticket
                     $ticket = EventTicket::find($ticketId);
                     if ($ticket && $ticket->event_id === $event->id) {
@@ -544,11 +569,11 @@ class AdminEventController extends Controller
                             'sale_start' => !empty($ticketData['sale_start']) ? $ticketData['sale_start'] : null,
                             'sale_end' => !empty($ticketData['sale_end']) ? $ticketData['sale_end'] : null,
                         ]);
-                        $updatedTicketIds[] = $ticketId;
+                        $updatedTicketIds[] = (int)$ticketId;
                     }
                 } else {
                     // Create new ticket
-                    EventTicket::create([
+                    $newTicket = EventTicket::create([
                         'event_id' => $event->id,
                         'name' => trim($ticketData['name']),
                         'price' => (float)$ticketData['price'],
@@ -557,13 +582,22 @@ class AdminEventController extends Controller
                         'sale_start' => !empty($ticketData['sale_start']) ? $ticketData['sale_start'] : null,
                         'sale_end' => !empty($ticketData['sale_end']) ? $ticketData['sale_end'] : null,
                     ]);
+                    $updatedTicketIds[] = $newTicket->id;
                 }
             }
 
-            // Delete tickets that were removed
+            // Delete tickets that were removed from the form
+            // Use individual deletes instead of whereIn for more reliability
             $ticketsToDelete = array_diff($existingTicketIds, $updatedTicketIds);
+
             if (!empty($ticketsToDelete)) {
-                EventTicket::whereIn('id', $ticketsToDelete)->delete();
+                foreach ($ticketsToDelete as $ticketIdToDelete) {
+                    $ticketToDelete = EventTicket::find($ticketIdToDelete);
+                    if ($ticketToDelete && $ticketToDelete->event_id === $event->id) {
+                        $ticketToDelete->delete();
+                        error_log("Deleted ticket ID: {$ticketIdToDelete}");
+                    }
+                }
             }
 
             return true;
@@ -618,7 +652,10 @@ class AdminEventController extends Controller
                 }
             } else {
                 // Remove discount if disabled
-                $event->discount()->delete();
+                $discount = $event->discount;
+                if ($discount) {
+                    $discount->delete();
+                }
             }
             return true;
         } catch (Exception $e) {
@@ -651,6 +688,35 @@ class AdminEventController extends Controller
             return true;
         } catch (Exception $e) {
             error_log("Failed to create event categories: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update event categories
+     */
+    private function updateEventCategories(Event $event, $categoryId): bool
+    {
+        try {
+            // First, check if the category relationship already exists
+            $existingCategory = EventCategories::where('event_id', $event->id)->first();
+
+            if ($existingCategory) {
+                // Update the existing category
+                $existingCategory->update([
+                    'type_id' => $categoryId
+                ]);
+            } else {
+                // Create new category relationship
+                EventCategories::create([
+                    'event_id' => $event->id,
+                    'type_id' => $categoryId
+                ]);
+            }
+
+            return true;
+        } catch (Exception $e) {
+            error_log("Failed to update event categories: " . $e->getMessage());
             return false;
         }
     }

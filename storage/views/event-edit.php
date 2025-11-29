@@ -523,35 +523,44 @@
 
     // ========== ADD TICKET FUNCTION ==========
     function addTicket() {
-        const timestamp = Date.now();
-        const random = Math.floor(Math.random() * 1000);
-        const ticketId = 'new_' + timestamp + '_' + random;
+        const ticketId = ticketCounter++;
 
         const ticketHTML = `
-        <div class="ticket-item" data-ticket-id="${ticketId}">
-            <div class="ticket-header">
-                <span class="ticket-number">New Ticket</span>
-                <button type="button" class="btn-custom btn-danger remove-ticket-btn" onclick="removeTicket('${ticketId}')">
-                    <i class="bi bi-trash"></i> Remove
-                </button>
+            <div class="ticket-item" data-ticket-id="${ticketId}">
+                <div class="ticket-header">
+                    <span class="ticket-number">Ticket #${ticketId + 1}</span>
+                    <button type="button" class="btn-custom btn-danger remove-ticket-btn" onclick="removeTicket(${ticketId})">
+                        <i class="bi bi-trash"></i> Remove
+                    </button>
+                </div>
+                <div class="ticket-fields">
+                    <div class="form-group">
+                        <label class="form-label">Ticket Name *</label>
+                        <input type="text" name="tickets[${ticketId}][name]" class="form-control" placeholder="e.g., Early Bird, VIP, General Admission" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Price *</label>
+                        <input type="number" name="tickets[${ticketId}][price]" class="form-control" placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Quantity Available *</label>
+                        <input type="number" name="tickets[${ticketId}][quantity]" class="form-control" placeholder="e.g., 100" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sale Start Date</label>
+                        <input type="date" name="tickets[${ticketId}][sale_start]" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sale End Date</label>
+                        <input type="date" name="tickets[${ticketId}][sale_end]" class="form-control">
+                    </div>
+                    <div class="form-group ticket-field-full">
+                        <label class="form-label">Description</label>
+                        <textarea name="tickets[${ticketId}][description]" class="form-control" rows="2" placeholder="What's included with this ticket type?"></textarea>
+                    </div>
+                </div>
             </div>
-            <div class="ticket-fields">
-                <div class="form-group">
-                    <label class="form-label">Ticket Name *</label>
-                    <input type="text" name="tickets[${ticketId}][name]" class="form-control" placeholder="e.g., Early Bird, VIP, General Admission" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Price *</label>
-                    <input type="number" name="tickets[${ticketId}][price]" class="form-control" placeholder="0.00" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Quantity Available *</label>
-                    <input type="number" name="tickets[${ticketId}][quantity]" class="form-control" placeholder="e.g., 100" min="1" required>
-                </div>
-                <!-- ... rest of ticket fields ... -->
-            </div>
-        </div>
-    `;
+        `;
 
         $('#ticketsList').append(ticketHTML);
         $('#ticketsEmptyState').hide();
