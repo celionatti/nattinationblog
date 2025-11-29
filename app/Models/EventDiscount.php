@@ -34,9 +34,11 @@ class EventDiscount extends PlugModel
         'used_count'
     ];
 
+    protected $guarded = [];
+
     protected $casts = [
         'discount_value' => 'float',
-        'promo_valid_until' => 'date',
+        'promo_valid_until' => 'date:Y-m-d',
         'promo_usage_limit' => 'integer',
         'used_count' => 'integer'
     ];

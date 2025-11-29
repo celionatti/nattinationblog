@@ -30,6 +30,7 @@ class AdminEventTypeController extends Controller
     {
         try {
             // Get query parameters
+            $queryParams = $request->getQueryParams();
             $perPage = 15;
             $currentPage = (int)($queryParams['page'] ?? 1);
 

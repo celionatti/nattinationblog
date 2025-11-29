@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Admin Event Create')
+@section('title', 'Admin Edit Event')
 
 @push('styles')
 <!-- Summernote CSS -->
@@ -22,12 +22,13 @@
 
 @section('content')
 <div style="margin-bottom: 24px;">
-    <h1 class="page-title">Create New Event</h1>
-    <p class="page-subtitle">Host new and engaging events for your audience.</p>
+    <h1 class="page-title">Edit: {{ $event->title }}</h1>
+    <p class="page-subtitle">Update event and engaging events for your audience.</p>
 </div>
 
-<form action="{{ route('admin.events.store') }}" method="post" id="eventForm" enctype="multipart/form-data">
+<form action="{{ route('admin.events.update', ['id' => $event->id]) }}" method="post" id="eventForm" enctype="multipart/form-data">
     @csrf
+    @method('PUT')
 
     <!-- Hidden field to determine action -->
     <input type="hidden" name="action" id="formAction" value="pending">
@@ -45,7 +46,7 @@
                             placeholder="Event title"
                             rows="1"
                             autocomplete="off"
-                            style="height: auto;">{{ old('title') }}</textarea>
+                            style="height: auto;">{{ old('title', $event->title) }}</textarea>
                         @error('title')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -63,13 +64,13 @@
                         <label class="form-label">Event Date & Time</label>
                         <div class="datetime-group">
                             <div>
-                                <input type="date" name="event_date" class="form-control @error('event_date') is-invalid @enderror" value="{{ old('event_date') }}" required>
+                                <input type="date" name="event_date" class="form-control @error('event_date') is-invalid @enderror" value="{{ old('event_date', $event->event_date) }}" required>
                                 @error('event_date')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div>
-                                <input type="time" name="event_time" class="form-control @error('event_time') is-invalid @enderror" value="{{ old('event_time') }}" required>
+                                <input type="time" name="event_time" class="form-control @error('event_time') is-invalid @enderror" value="{{ old('event_time', $event->event_time) }}" required>
                                 @error('event_time')
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -79,7 +80,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Location / Venue</label>
-                        <input type="text" name="location" class="form-control @error('location') is-invalid @enderror" placeholder="Enter event location or 'Online'" value="{{ old('location') }}" required>
+                        <input type="text" name="location" class="form-control @error('location') is-invalid @enderror" placeholder="Enter event location or 'Online'" value="{{ old('location', $event->location) }}" required>
                         @error('location')
                         <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -97,7 +98,7 @@
                         <textarea
                             id="summernote"
                             name="content"
-                            class="form-control @error('content') is-invalid @enderror">{{ old('content') }}</textarea>
+                            class="form-control @error('content') is-invalid @enderror">{{ old('content', $event->content) }}</textarea>
                         @error('content')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -114,22 +115,60 @@
                     <div class="form-group">
                         <label class="form-label">Event Type</label>
                         <div class="event-type-toggle">
-                            <button type="button" class="event-type-option active" data-type="paid">
+                            <button type="button" class="event-type-option {{ $event->event_type === 'paid' ? 'active' : '' }}" data-type="paid">
                                 <i class="bi bi-ticket-perforated"></i> Paid
                             </button>
-                            <button type="button" class="event-type-option" data-type="free">
+                            <button type="button" class="event-type-option {{ $event->event_type === 'free' ? 'active' : '' }}" data-type="free">
                                 <i class="bi bi-gift"></i> Free
                             </button>
                         </div>
-                        <input type="hidden" name="event_type" id="eventType" value="paid">
+                        <input type="hidden" name="event_type" id="eventType" value="{{ $event->event_type }}">
                     </div>
 
                     <!-- Tickets Container (Hidden for Free Events) -->
-                    <div id="ticketsContainer" style="margin-top: 24px;">
+                    <div id="ticketsContainer" style="margin-top: 24px; <?= $event->event_type === 'free' ? 'display: none;' : '' ?>">
                         <div class="form-label" style="margin-bottom: 16px;">Ticket Types</div>
 
                         <div id="ticketsList">
                             <!-- Tickets will be added here dynamically -->
+                            @if($event->tickets)
+                            @foreach($event->tickets as $index => $ticket)
+                            <div class="ticket-item" data-ticket-id="{{ $ticket->id }}">
+                                <div class="ticket-header">
+                                    <span class="ticket-number">Ticket #{{ $index + 1 }}</span>
+                                    <button type="button" class="btn-custom btn-danger remove-ticket-btn" onclick="removeTicket(<?= $ticket->id ?>)">
+                                        <i class="bi bi-trash"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="ticket-fields">
+                                    <div class="form-group">
+                                        <label class="form-label">Ticket Name *</label>
+                                        <input type="text" name="tickets[{{ $ticket->id }}][name]" class="form-control" value="{{ $ticket->name }}" placeholder="e.g., Early Bird, VIP, General Admission" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Price *</label>
+                                        <input type="number" name="tickets[{{ $ticket->id }}][price]" class="form-control" value="{{ $ticket->price }}" placeholder="0.00" min="0" step="0.01" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Quantity Available *</label>
+                                        <input type="number" name="tickets[{{ $ticket->id }}][quantity]" class="form-control" value="{{ $ticket->quantity }}" placeholder="e.g., 100" min="1" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Sale Start Date</label>
+                                        <input type="date" name="tickets[{{ $ticket->id }}][sale_start]" class="form-control" value="{{ $ticket->sale_start }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Sale End Date</label>
+                                        <input type="date" name="tickets[{{ $ticket->id }}][sale_end]" class="form-control" value="{{ $ticket->sale_end }}">
+                                    </div>
+                                    <div class="form-group ticket-field-full">
+                                        <label class="form-label">Description</label>
+                                        <textarea name="tickets[{{ $ticket->id }}][description]" class="form-control" rows="2" placeholder="What's included with this ticket type?">{{ $ticket->description }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                            @endif
                         </div>
 
                         <button type="button" class="add-ticket-btn" id="addTicketBtn">
@@ -137,7 +176,7 @@
                             Add Ticket Type
                         </button>
 
-                        <div class="tickets-empty-state" id="ticketsEmptyState">
+                        <div class="tickets-empty-state" id="ticketsEmptyState" style="<?= ($event->tickets && $event->tickets->count() > 0) ? 'display: none;' : '' ?>">
                             <i class="bi bi-ticket-perforated"></i>
                             <p style="margin: 8px 0 0 0; font-weight: 500;">No tickets added yet</p>
                             <p style="margin: 4px 0 0 0; font-size: 13px;">Click "Add Ticket Type" to create your first ticket</p>
@@ -147,51 +186,55 @@
             </div>
 
             <!-- Discount/Promo Section -->
-            <div class="editor-card" id="discountSection">
+            <div class="editor-card" id="discountSection" style="<?= $event->event_type === 'free' ? 'display: none;' : '' ?>">
                 <div class="editor-card-header">
                     <h2 class="editor-card-title">Promotions & Discounts</h2>
                 </div>
                 <div class="editor-card-body">
                     <div class="discount-toggle">
                         <label class="switch">
-                            <input type="checkbox" id="enableDiscount" name="promo[enabled]" value="1">
+                            <input type="checkbox" id="enableDiscount" name="promo[enabled]" value="1" {{ $event->discount ? 'checked' : '' }}>
                             <span class="slider"></span>
                         </label>
                         <label for="enableDiscount" style="cursor: pointer; font-weight: 600; font-size: 14px;">Enable Promo Code</label>
                     </div>
 
-                    <div class="discount-fields" id="discountFields">
+                    <div class="discount-fields {{ $event->discount ? 'active' : '' }}" id="discountFields">
                         <div class="form-group">
                             <label class="form-label">Promo Code</label>
-                            <input type="text" name="promo[code]" class="form-control" placeholder="e.g., EARLY2024" style="text-transform: uppercase;">
+                            <input type="text" name="promo[code]" class="form-control" placeholder="e.g., EARLY2024" style="text-transform: uppercase;" value="{{ $event->discount ? $event->discount->promo_code : '' }}">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Discount Type</label>
                             <select name="promo[discount_type]" class="form-select" id="discountType">
-                                <option value="percentage">Percentage (%)</option>
-                                <option value="fixed">Fixed Amount</option>
+                                <option value="percentage" {{ $event->discount && $event->discount->discount_type === 'percentage' ? 'selected' : '' }}>Percentage (%)</option>
+                                <option value="fixed" {{ $event->discount && $event->discount->discount_type === 'fixed' ? 'selected' : '' }}>Fixed Amount</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Discount Value</label>
-                            <input type="number" name="promo[discount_value]" class="form-control" placeholder="e.g., 10" min="0" step="0.01">
+                            <input type="number" name="promo[discount_value]" class="form-control" placeholder="e.g., 10" min="0" step="0.01" value="{{ $event->discount ? $event->discount->discount_value : '' }}">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Valid Until (Optional)</label>
-                            <input type="date" name="promo[valid_until]" class="form-control">
+                            <input type="date" name="promo[valid_until]" class="form-control" value="{{ $event->discount ? $event->discount->promo_valid_until : '' }}">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Usage Limit (Optional)</label>
-                            <input type="number" name="promo[usage_limit]" class="form-control" placeholder="Leave empty for unlimited" min="1">
+                            <input type="number" name="promo[usage_limit]" class="form-control" placeholder="Leave empty for unlimited" min="1" value="{{ $event->discount ? $event->discount->promo_usage_limit : '' }}">
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- SEO Fields (Hidden but included for form submission) -->
+            <input type="hidden" name="seo_title" value="{{ $event->seo_title }}">
+            <input type="hidden" name="seo_description" value="{{ $event->seo_description }}">
+            <input type="hidden" name="seo_keywords" value="{{ $event->seo_keywords }}">
         </div>
 
         <!-- Editor Sidebar -->
@@ -203,7 +246,18 @@
                 </div>
                 <div class="editor-card-body">
                     <div class="form-group">
-                        <div class="form-label">Status: <span class="status-badge status-draft">Pending</span></div>
+                        @php
+                        $statusClass = 'status-draft';
+                        $statusText = 'Cancelled';
+                        if ($event->status === 'launched') {
+                        $statusClass = 'status-published';
+                        $statusText = 'Launched';
+                        } elseif ($event->status === 'pending') {
+                        $statusClass = 'status-pending';
+                        $statusText = 'Pending';
+                        }
+                        @endphp
+                        <div class="form-label">Status: <span class="status-badge {{ $statusClass }}">{{ $statusText }}</span></div>
                         <div class="form-text">Ready to launch</div>
                     </div>
 
@@ -236,7 +290,7 @@
                             @foreach ($categories as $category)
                             <option
                                 value="{{ $category->id }}"
-                                {{ old('categories') === $category->id ? 'selected' : '' }}>
+                                {{ old('categories', $event->event_types->first()->id ?? '') === $category->id ? 'selected' : '' }}>
                                 {{ $category->name }}
                             </option>
                             @endforeach
@@ -257,18 +311,27 @@
                     <h2 class="editor-card-title">Event Cover Image</h2>
                 </div>
                 <div class="editor-card-body">
-                    <input type="file" name="event_image" id="featuredImageInput" accept="image/*"
-                        style="display: none;">
+                    <input type="file" name="event_image" id="featuredImageInput" accept="image/*" style="display: none;">
+                    <input type="hidden" name="remove_event_image" id="removeEventImage" value="0">
                     <div class="featured-image-container" id="featuredImageContainer">
+                        @if($event->event_image)
+                        <img src="{{ $event->event_image }}" class="featured-image-preview" id="featuredImagePreview" alt="Featured Image" style="display: block;">
+                        <div class="featured-image-placeholder" style="display: none;">
+                            <i class="bi bi-image"></i>
+                            <p style="margin: 8px 0 4px 0; font-weight: 600;">Set cover image</p>
+                            <p class="text-muted" style="margin: 0; font-size: 12px;">Click to upload or drag and drop</p>
+                        </div>
+                        @else
                         <div class="featured-image-placeholder">
                             <i class="bi bi-image"></i>
                             <p style="margin: 8px 0 4px 0; font-weight: 600;">Set cover image</p>
                             <p class="text-muted" style="margin: 0; font-size: 12px;">Click to upload or drag and drop</p>
                         </div>
-                        <img src="" class="featured-image-preview" id="featuredImagePreview" alt="Featured Image">
+                        <img src="" class="featured-image-preview" id="featuredImagePreview" alt="Featured Image" style="display: none;">
+                        @endif
                     </div>
 
-                    <div class="featured-image-actions" id="featuredImageActions">
+                    <div class="featured-image-actions" id="featuredImageActions" style="<?= $event->event_image ? 'display: flex;' : 'display: none;' ?>">
                         <button type="button" class="btn-custom btn-secondary" id="changeImage">
                             <i class="bi bi-arrow-repeat"></i>
                             Change
@@ -280,7 +343,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </form>
@@ -531,6 +593,7 @@
     const featuredImageActions = document.getElementById('featuredImageActions');
     const changeImageBtn = document.getElementById('changeImage');
     const removeImageBtn = document.getElementById('removeImage');
+    const removeEventImageInput = document.getElementById('removeEventImage');
 
     if (featuredImageContainer) {
         featuredImageContainer.addEventListener('click', function() {
@@ -552,6 +615,7 @@
             featuredImagePreview.style.display = 'none';
             featuredImageActions.style.display = 'none';
             featuredImageInput.value = '';
+            removeEventImageInput.value = '1';
             featuredImageContainer.querySelector('.featured-image-placeholder').style.display = 'flex';
         });
     }
@@ -581,6 +645,7 @@
                     featuredImagePreview.src = e.target.result;
                     featuredImagePreview.style.display = 'block';
                     featuredImageActions.style.display = 'flex';
+                    removeEventImageInput.value = '0';
                     featuredImageContainer.querySelector('.featured-image-placeholder').style.display = 'none';
                 }
                 reader.readAsDataURL(file);

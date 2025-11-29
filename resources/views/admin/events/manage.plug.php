@@ -31,28 +31,45 @@
                 </tr>
             </thead>
             <tbody>
+                @foreach($events as $event)
                 <tr>
                     <td>
                         <div class="post-info">
-                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=120&h=90&fit=crop"
-                                alt="Post" class="post-thumbnail">
+                            <img src="{{ $event->event_image }}"
+                                alt="{{ $event->title }}" class="post-thumbnail">
                             <div class="post-details">
-                                <div class="post-title-text">Breaking: Major Development Reshapes Global
-                                    Economy</div>
-                                <div class="post-category">World News</div>
+                                <div class="post-title-text">@titleTruncate($event->title, 50)</div>
+                                <!-- <div class="post-category">World News</div> -->
                             </div>
                         </div>
                     </td>
                     <td>
                         <div class="author-info">
-                            <div class="author-avatar text-uppercase">AM</div>
-                            <span>Amisu Usman</span>
+                            @php
+                            $authorName = $event->author ? $event->author->name : 'Unknown';
+                            $initials = substr($authorName, 0, 2);
+                            @endphp
+                            <div class="author-avatar text-uppercase">{{ $initials }}</div>
+                            <span>{{ $authorName }}</span>
                         </div>
                     </td>
                     <td>
-                        <span class="status-badge status-published">Published</span>
+                        @php
+                        $statusClass = [
+                        'launched' => 'status-published',
+                        'pending' => 'status-draft',
+                        'cancelled' => 'status-archived'
+                        ][$event->status] ?? 'status-draft';
+                        @endphp
+                        <span class="status-badge {{ $statusClass }}">{{ ucfirst($event->status) }}</span>
                     </td>
-                    <td>2 hours ago</td>
+                    <td>
+                        @if($event->published_at)
+                        @diffForHumans($event->published_at)
+                        @else
+                        @diffForHumans($event->created_at)
+                        @endif
+                    </td>
                     <td>
                         <div class="action-buttons">
                             <a href="{{ route('admin.events.show', ['id' => $event->id ?? 0, 'slug' => $event->slug ?? '']) }}" class="action-btn view" title="View">
@@ -71,6 +88,7 @@
                         </div>
                     </td>
                 </tr>
+                @endforeach
             </tbody>
         </table>
     </div>

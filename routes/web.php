@@ -135,11 +135,13 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::post('/events/create', [AdminEventController::class, 'store'])->name('admin.events.store');
 
-    Route::get('/events/detail/{id}', [AdminEventController::class, 'show'])->name('admin.events.show');
+    Route::get('/events/detail/{id}/{slug}', [AdminEventController::class, 'show'])->name('admin.events.show');
 
-    Route::get('/events/edit/{id}', [AdminEventController::class, 'create'])->name('admin.events.edit');
+    Route::get('/events/edit/{id}', [AdminEventController::class, 'edit'])->name('admin.events.edit');
 
-    Route::delete('/events/delete/{id}', [AdminEventController::class, 'create'])->name('admin.events.destroy');
+    Route::put('/events/edit/{id}', [AdminEventController::class, 'update'])->name('admin.events.update');
+
+    Route::delete('/events/delete/{id}', [AdminEventController::class, 'destroy'])->name('admin.events.destroy');
 
     /*
     * -------------------------------------------------------------------------------

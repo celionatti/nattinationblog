@@ -34,10 +34,12 @@ class EventTicket extends PlugModel
         'sale_end'
     ];
 
+    protected $guarded = [];
+
     protected $casts = [
         'price' => 'float',
-        'sale_start' => 'date',
-        'sale_end' => 'date',
+        'sale_start' => 'date:Y-m-d',
+        'sale_end' => 'date:Y-m-d',
     ];
 
     public function event()

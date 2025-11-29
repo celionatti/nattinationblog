@@ -41,8 +41,10 @@ class Event extends PlugModel
         'published_at'
     ];
 
+    protected $guarded = [];
+
     protected $casts = [
-        'event_date' => 'date',
+        'event_date' => 'date:Y-m-d',
         'published_at' => 'datetime',
     ];
 

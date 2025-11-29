@@ -53,7 +53,7 @@
     <div class="sidebar-section-title">Events</div>
     <ul class="sidebar-nav">
         <li class="sidebar-nav-item" id="events">
-            <a href="{{ url('admin/events') }}" class="sidebar-nav-link {{ activeClass('/admin/events', exact: true) }}">
+            <a href="{{ url('admin/events') }}" class="sidebar-nav-link {{ activeClass('/admin/events') }}">
                 <i class="bi bi-calendar-event"></i>
                 Events
             </a>
