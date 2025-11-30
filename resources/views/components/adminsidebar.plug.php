@@ -64,12 +64,6 @@
                 Event Types
             </a>
         </li>
-        <li class="sidebar-nav-item">
-            <a href="{{ url('admin/events/tickets') }}" class="sidebar-nav-link {{ activeClass('/admin/tickets') }}">
-                <i class="bi bi-ticket-detailed"></i>
-                Tickets
-            </a>
-        </li>
     </ul>
 
     <div class="sidebar-section-title">Resources</div>

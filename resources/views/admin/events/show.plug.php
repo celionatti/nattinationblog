@@ -793,7 +793,8 @@ use Plugs\Utils\Str;
                 <div class="analytics-label">Total Revenue</div>
             </div>
         </div>
-        <!-- Here -->
+        <!-- Sales Chart -->
+        
     </div>
 </div>
 @endsection

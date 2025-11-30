@@ -23,6 +23,7 @@ use App\Controllers\AdminEventController;
 use App\Controllers\AdminArticleController;
 use App\Controllers\AdminSettingController;
 use App\Controllers\AdminCategoryController;
+use App\Controllers\AdminResourceController;
 use App\Controllers\AdminEventTypeController;
 
 // Route::get('/home', [HomeController::class, 'index']);
@@ -142,6 +143,25 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     Route::put('/events/edit/{id}', [AdminEventController::class, 'update'])->name('admin.events.update');
 
     Route::delete('/events/delete/{id}', [AdminEventController::class, 'destroy'])->name('admin.events.destroy');
+
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Resources
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/resources', [AdminResourceController::class, 'manage'])->name('admin.resources.index');
+
+    Route::get('/resources/create', [AdminResourceController::class, 'create'])->name('admin.resources.create');
+
+    Route::post('/resources/create', [AdminResourceController::class, 'store'])->name('admin.resources.store');
+
+    Route::get('/resources/detail/{id}/{slug}', [AdminResourceController::class, 'show'])->name('admin.resources.show');
+
+    Route::get('/resources/edit/{id}', [AdminResourceController::class, 'edit'])->name('admin.resources.edit');
+
+    Route::put('/resources/edit/{id}', [AdminResourceController::class, 'update'])->name('admin.resources.update');
+
+    Route::delete('/resources/delete/{id}', [AdminResourceController::class, 'destroy'])->name('admin.resources.destroy');
 
     /*
     * -------------------------------------------------------------------------------
