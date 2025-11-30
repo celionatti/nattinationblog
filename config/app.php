@@ -17,9 +17,12 @@ return [
     'debug' => $_ENV['APP_DEBUG'] ?? false,
     'url' => $_ENV['APP_URL'] ?? 'http://localhost',
     'timezone' => $_ENV['APP_TIMEZONE'] ?? 'UTC',
-    
+    'currency' => 'NGN', // or 'USD'
+    'currency_symbol' => '₦', // or '$'
+    'currency_decimals' => 2,
+
     'key' => $_ENV['APP_KEY'] ?? null,
-    
+
     'paths' => [
         'views' => BASE_PATH . 'views',
         'cache' => BASE_PATH . 'storage/cache',

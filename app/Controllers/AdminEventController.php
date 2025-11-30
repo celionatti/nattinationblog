@@ -417,6 +417,80 @@ class AdminEventController extends Controller
         }
     }
 
+    public function show(Request $request)
+    {
+        try {
+            $id = $this->param($request, 'id');
+
+            $event = Event::with(['tickets', 'author', 'discount'])->find($id);
+
+            if (!$event) {
+                FlashMessage::error('Event not found');
+                return $this->redirect('/admin/events');
+            }
+
+            // Calculate ticket statistics
+            $totalTickets = 0;
+            $soldTickets = 0;
+            $availableTickets = 0;
+            $totalRevenue = 0;
+            $ticketSales = [];
+            $averageTicketPrice = 0;
+
+            if ($event->tickets && $event->tickets->count() > 0) {
+                foreach ($event->tickets as $ticket) {
+                    // In a real application, you would get these from your orders/attendees table
+                    $sold = rand(0, $ticket->quantity); // Mock data - replace with actual query
+                    $revenue = $sold * $ticket->price;
+
+                    $ticketSales[$ticket->id] = [
+                        'sold' => $sold,
+                        'revenue' => $revenue
+                    ];
+
+                    $totalTickets += $ticket->quantity;
+                    $soldTickets += $sold;
+                    $totalRevenue += $revenue;
+                }
+
+                $availableTickets = $totalTickets - $soldTickets;
+                $averageTicketPrice = $soldTickets > 0 ? $totalRevenue / $soldTickets : 0;
+            }
+
+            // Mock analytics data - replace with actual data from your database
+            $salesChartData = [
+                ['label' => 'Jan', 'value' => rand(10, 50)],
+                ['label' => 'Feb', 'value' => rand(20, 70)],
+                ['label' => 'Mar', 'value' => rand(30, 90)],
+                ['label' => 'Apr', 'value' => rand(15, 60)],
+                ['label' => 'May', 'value' => rand(25, 80)],
+                ['label' => 'Jun', 'value' => rand(40, 100)]
+            ];
+
+            $data = [
+                'page_title' => "{$event->title} Details",
+                'event' => $event,
+                'totalTickets' => $totalTickets,
+                'soldTickets' => $soldTickets,
+                'availableTickets' => $availableTickets,
+                'totalRevenue' => $totalRevenue,
+                'ticketSales' => $ticketSales,
+                'averageTicketPrice' => $averageTicketPrice,
+                'salesChartData' => $salesChartData,
+                'attendanceRate' => $totalTickets > 0 ? round(($soldTickets / $totalTickets) * 100) : 0,
+                'conversionRate' => rand(5, 25), // Mock data
+                'refundRate' => rand(1, 5), // Mock data
+                'daysToEvent' => $event->event_date,
+                'totalAttendees' => $soldTickets // Mock data - replace with actual attendee count
+            ];
+
+            return $this->view('admin.events.show', $data);
+        } catch (Exception $e) {
+            FlashMessage::error('Error loading event: ' . $e->getMessage());
+            return $this->redirect('/admin/events');
+        }
+    }
+
     /**
      * Validate event data
      */

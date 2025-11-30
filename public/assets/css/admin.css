@@ -1028,6 +1028,11 @@ textarea.form-control {
   transform: translateY(-2px);
 }
 
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
 /* ========== BULK ACTIONS MENU ========== */
 .bulk-actions-container {
   display: none;
@@ -2029,6 +2034,19 @@ input:checked + .slider:before {
   .post-featured-image {
     height: 300px;
   }
+
+  .event-header {
+    flex-direction: column;
+  }
+
+  .event-info {
+    flex-direction: column;
+  }
+
+  .event-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2150,6 +2168,46 @@ input:checked + .slider:before {
   .posts-grid {
     grid-template-columns: 1fr;
   }
+
+  .event-title {
+    font-size: 1.5rem;
+  }
+
+  .event-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .event-stats {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .tabs-list {
+    flex-direction: column;
+  }
+
+  .tab-item {
+    flex: none;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-col {
+    min-width: 100%;
+  }
+
+  .ticket-type-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ticket-type-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2243,6 +2301,19 @@ input:checked + .slider:before {
 
   .post-body {
     font-size: 1rem;
+  }
+
+  .event-header {
+    padding: 1.5rem;
+  }
+
+  .content-card {
+    padding: 1.5rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

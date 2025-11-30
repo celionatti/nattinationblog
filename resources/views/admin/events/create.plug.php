@@ -21,9 +21,17 @@
 @endpush
 
 @section('content')
-<div style="margin-bottom: 24px;">
-    <h1 class="page-title">Create New Event</h1>
-    <p class="page-subtitle">Host new and engaging events for your audience.</p>
+<div class="d-flex justify-content-between align-items-start mb-2">
+    <div>
+        <h1 class="page-title">Create New Event</h1>
+        <p class="page-subtitle">Host new and engaging events for your audience.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.events.index') }}" class="btn-custom btn-secondary text-decoration-none">
+            <i class="bi bi-arrow-left"></i>
+            Back to Events
+        </a>
+    </div>
 </div>
 
 <form action="{{ route('admin.events.store') }}" method="post" id="eventForm" enctype="multipart/form-data">

@@ -64,7 +64,7 @@
                 Event Types
             </a>
         </li>
-        <li class="sidebar-nav-item" id="tickets">
+        <li class="sidebar-nav-item">
             <a href="{{ url('admin/events/tickets') }}" class="sidebar-nav-link {{ activeClass('/admin/tickets') }}">
                 <i class="bi bi-ticket-detailed"></i>
                 Tickets
@@ -110,7 +110,7 @@
 
     <div class="sidebar-section-title">Settings</div>
     <ul class="sidebar-nav">
-        <li class="sidebar-nav-item" id="settings">
+        <li class="sidebar-nav-item">
             <a href="{{ url('admin/settings') }}" class="sidebar-nav-link {{ activeClass('/admin/settings', exact: true) }}">
                 <i class="bi bi-gear"></i>
                 Settings
