@@ -6,19 +6,16 @@ namespace App\Controllers;
 
 /*
 |--------------------------------------------------------------------------
-| Admin Events Controller
+| Admin Resources Controller
 |--------------------------------------------------------------------------
-| This controller handles administrative functionalities for events.
+| This controller handles administrative functionalities for resources.
 */
 
 use Exception;
 use App\Models\User;
-use App\Models\Event;
-use App\Models\EventCategories;
-use App\Models\EventType;
-use App\Models\EventTicket;
+use App\Models\Resource;
 use Plugs\View\ErrorMessage;
-use App\Models\EventDiscount;
+use App\Models\ResourceDownload;
 use Plugs\Utils\FlashMessage;
 use Plugs\Paginator\Paginator;
 use Plugs\Upload\FileUploader;
@@ -39,6 +36,9 @@ class AdminResourceController extends Controller
         $this->uploader->disableSecurityFiles();
     }
 
+    /**
+     * Display resource management page
+     */
     public function manage(Request $request)
     {
         try {
@@ -47,11 +47,32 @@ class AdminResourceController extends Controller
             $currentPage = (int)($queryParams['page'] ?? 1);
 
             // Build query
-            $query = Event::with(['author', 'tickets']);
+            $query = Resource::with(['user']);
+
+            // Search functionality
+            $search = $queryParams['search'] ?? null;
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
+                });
+            }
+
+            // Filter by status
+            $status = $queryParams['status'] ?? null;
+            if ($status && in_array($status, ['published', 'draft', 'pending'])) {
+                $query->where('status', $status);
+            }
+
+            // Filter by file type
+            $fileType = $queryParams['file_type'] ?? null;
+            if ($fileType && in_array($fileType, ['image', 'video', 'audio', 'document', 'other'])) {
+                $query->where('file_type', $fileType);
+            }
 
             // Apply ordering
-            $query = $query->orderBy('event_date', 'ASC')
-                ->orderBy('event_time', 'ASC');
+            $query = $query->orderBy('created_at', 'DESC')
+                ->orderBy('published_at', 'DESC');
 
             // Create paginator and get results
             $paginator = Paginator::fromQuery($query, $perPage, $currentPage);
@@ -60,41 +81,41 @@ class AdminResourceController extends Controller
             return $this->view('admin.resources.manage', [
                 'resources' => $resources,
                 'paginator' => $paginator,
+                'search' => $search,
+                'status' => $status,
+                'file_type' => $fileType,
                 'page_title' => 'Resources Management',
                 'page_subtitle' => 'Upload and manage media, files, and documents for your users.'
             ]);
         } catch (Exception $e) {
-            FlashMessage::error('Failed to load events: ' . $e->getMessage());
-            return $this->view('admin.events.manage', [
-                'events' => [],
+            FlashMessage::error('Failed to load resources: ' . $e->getMessage());
+            return $this->view('admin.resources.manage', [
+                'resources' => [],
                 'paginator' => null,
-                'page_title' => 'Manage Events'
+                'page_title' => 'Resources Management'
             ]);
         }
     }
 
+    /**
+     * Display create resource form
+     */
     public function create(Request $request)
     {
         try {
-            // Get active categories from database
-            $categories = EventType::where('is_active', true)
-                ->orderBy('sort_order', 'ASC')
-                ->orderBy('name', 'ASC')
-                ->get();
-
-            return $this->view('admin.events.create', [
-                'categories' => $categories,
-                'page_title' => 'Create New Event'
+            return $this->view('admin.resources.create', [
+                'page_title' => 'Create New Resource',
+                'page_subtitle' => 'Add New Resource for user Free or Paid.',
             ]);
         } catch (Exception $e) {
-            FlashMessage::error('Failed to load event creation page: ' . $e->getMessage());
-            return $this->view('admin.events.create', [
-                'categories' => [],
-                'page_title' => 'Create New Event'
-            ]);
+            FlashMessage::error('Failed to load resource creation page: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
         }
     }
 
+    /**
+     * Store new resource
+     */
     public function store(Request $request)
     {
         try {
@@ -102,9 +123,10 @@ class AdminResourceController extends Controller
 
             $data = $request->getParsedBody();
             $action = $data['action'] ?? 'pending';
-            $isLaunch = $action === 'launch';
+            $isPublish = $action === 'published';
 
-            $errors = $this->validateEventData($request, $isLaunch);
+            // Validate resource data
+            $errors = $this->validateResourceData($request);
 
             // If validation fails, redirect back with errors
             if ($errors->any()) {
@@ -114,168 +136,159 @@ class AdminResourceController extends Controller
             // Get current user ID
             $userId = $this->getCurrentUserId($request);
             if (!$userId) {
-                FlashMessage::error('You must be logged in to create an event.');
-                return $this->redirect('/admin/events/create');
+                FlashMessage::error('You must be logged in to create a resource.');
+                return $this->redirect('/admin/resources/create');
             }
 
-            // Handle featured image upload
-            $eventImage = null;
-            if (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
-                $file = UploadedFile::createFromFilesArray($_FILES['event_image']);
+            // Handle file upload
+            $fileName = null;
+            $filePath = null;
+            $fileSize = 0;
+            $fileExtension = null;
+            $mimeType = null;
+
+            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                $file = UploadedFile::createFromFilesArray($_FILES['file']);
+
+                // Configure uploader based on file type
+                $fileType = $data['file_type'] ?? 'other';
+                $this->configureUploaderForFileType($fileType);
+
                 try {
                     $uploadResult = $this->uploader->upload($file, null, (string)$userId);
-                    $eventImage = $uploadResult['url'];
+
+                    // Extract file information
+                    $fileName = basename($uploadResult['path']);
+                    $filePath = $uploadResult['url'];
+                    $fileSize = $file->getSize();
+                    $fileExtension = $file->getClientExtension();
+                    $mimeType = $file->getMimeType();
                 } catch (Exception $e) {
-                    FlashMessage::error("Upload failed: " . $e->getMessage());
-                    return $this->redirect("/admin/events/create");
+                    FlashMessage::error("File upload failed: " . $e->getMessage());
+                    return $this->redirect("/admin/resources/create");
                 }
+            } else {
+                FlashMessage::error('Please select a file to upload.');
+                return $this->redirect("/admin/resources/create");
             }
 
-            // Generate slug from title
-            $slug = generateSlug(
-                $data['title'],
-                '-',
-                fn($s) => Event::where('slug', $s)->exists()
-            );
-
-            // Generate SEO fields if not provided
-            $seoTitle = !empty(trim($data['seo_title'] ?? ''))
-                ? trim($data['seo_title'])
-                : generateSeoTitle($data['title']);
-
-            $seoDescription = !empty(trim($data['seo_description'] ?? ''))
-                ? trim($data['seo_description'])
-                : generateSeoDescription($data['content'], $data['title']);
-
-            $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
-                ? trim($data['seo_keywords'])
-                : generateSeoKeywords($data['content'], $data['title']);
+            // Determine if resource is free based on price
+            $price = (float)$data['price'];
+            $isFree = $price <= 0;
 
             // Determine published_at date
             $publishedAt = null;
-            if ($isLaunch) {
+            if ($isPublish) {
                 $publishedAt = date('Y-m-d H:i:s');
             }
 
-            // Prepare event data
-            $eventData = [
+            // Prepare resource data
+            $resourceData = [
                 'title' => trim($data['title']),
-                'slug' => $slug,
-                'content' => $data['content'],
-                'event_date' => $data['event_date'],
-                'event_time' => $data['event_time'],
-                'location' => trim($data['location']),
-                'event_type' => $data['event_type'],
-                'event_image' => $eventImage,
-                'status' => $isLaunch ? "launched" : 'pending',
-                'author_id' => $userId,
-                'seo_title' => $seoTitle,
-                'seo_description' => $seoDescription,
-                'seo_keywords' => $seoKeywords,
+                'description' => trim($data['description'] ?? ''),
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'file_type' => $data['file_type'],
+                'file_extension' => $fileExtension,
+                'mime_type' => $mimeType,
+                'price' => $price,
+                'is_free' => $isFree,
+                'status' => $isPublish ? 'published' : 'pending',
+                'created_by' => $userId,
+                'download_count' => 0,
+                'paid_download_count' => 0,
+                'revenue_generated' => 0.00,
                 'published_at' => $publishedAt,
             ];
 
-            // Start transaction for event, tickets, and discount creation
-            $event = null;
-            try {
-                // Create the event
-                $event = Event::create($eventData);
+            // Handle featured image if provided
+            if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
+                $featuredImageFile = UploadedFile::createFromFilesArray($_FILES['featured_image']);
+                $this->uploader->imagesOnly(); // Only allow images for featured image
 
-                if ($event) {
-                    // Create tickets for paid events
-                    if ($data['event_type'] === 'paid' && isset($data['tickets'])) {
-                        $this->createEventTickets($event, $data['tickets']);
-                    }
-
-                    // Create discount if enabled
-                    $promoData = $data['promo'] ?? [];
-                    if (isset($promoData['enabled']) && $promoData['enabled'] === '1') {
-                        $this->createEventDiscount($event, $promoData);
-                    }
-
-                    // Create event categories
-                    if (!empty($data['categories'])) {
-                        $this->createEventCategories($event, $data['categories']);
-                    }
-
-                    $textStatus = $isLaunch ? "launched" : "saved as pending";
-                    FlashMessage::success("Event {$textStatus} successfully!");
-
-                    // Redirect based on action
-                    if ($action === 'pending') {
-                        return $this->redirect("/admin/events/edit/{$event->id}");
-                    }
-
-                    return $this->redirect('/admin/events');
+                try {
+                    $uploadResult = $this->uploader->upload($featuredImageFile, null, (string)$userId . '_featured');
+                    $resourceData['featured_image'] = $uploadResult['url'];
+                } catch (Exception $e) {
+                    // Featured image upload failed, but don't fail the whole process
+                    FlashMessage::warning("Featured image upload failed: " . $e->getMessage());
                 }
-            } catch (Exception $e) {
-                // If event was created but tickets/discount failed, delete the event
-                if ($event) {
-                    $event->delete();
-                }
-                throw $e;
             }
 
-            FlashMessage::error('Failed to create event. Please try again.');
-            return $this->redirect('/admin/events/create');
+            // Create the resource
+            $resource = Resource::create($resourceData);
+
+            if ($resource) {
+                $textStatus = $isPublish ? "published" : "saved as draft";
+                FlashMessage::success("Resource {$textStatus} successfully!");
+
+                // Log resource creation
+                error_log("Resource created: ID={$resource->id}, Title={$resource->title}, Type={$resource->file_type}");
+
+                // Redirect based on action
+                if ($action === 'pending') {
+                    return $this->redirect("/admin/resources/edit/{$resource->id}");
+                }
+
+                return $this->redirect('/admin/resources');
+            }
+
+            FlashMessage::error('Failed to create resource. Please try again.');
+            return $this->redirect('/admin/resources/create');
         } catch (Exception $e) {
-            FlashMessage::error('Error creating event: ' . $e->getMessage());
-            return $this->redirect('/admin/events/create');
+            FlashMessage::error('Error creating resource: ' . $e->getMessage());
+            error_log("Resource creation error: " . $e->getMessage());
+            return $this->redirect('/admin/resources/create');
         }
     }
 
     /**
-     * Display edit event form
+     * Display edit resource form
      */
     public function edit(Request $request, $id): Response
     {
         try {
-            $event = Event::with(['tickets', 'discount', 'event_types'])->find($id);
+            $resource = Resource::find($id);
 
-            if (!$event) {
-                FlashMessage::error('Event not found');
-                return $this->redirect('/admin/events');
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
             }
 
-            // Get active categories from database
-            $categories = EventType::where('is_active', true)
-                ->orderBy('sort_order', 'ASC')
-                ->orderBy('name', 'ASC')
-                ->get();
-
-            return $this->view('admin.events.edit', [
-                'event' => $event,
-                'categories' => $categories,
-                'page_title' => 'Edit Event'
+            return $this->view('admin.resources.edit', [
+                'resource' => $resource,
+                'page_title' => 'Edit Resource',
+                'page_subtitle' => 'Update resource information and settings.'
             ]);
         } catch (Exception $e) {
-            FlashMessage::error('Error loading event: ' . $e->getMessage());
-            return $this->redirect('/admin/events');
+            FlashMessage::error('Error loading resource: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
         }
     }
 
     /**
-     * Update existing event
+     * Update existing resource
      */
     public function update(Request $request, $id): Response
     {
         try {
             $this->currentRequest = $request;
 
-            // Find the event
-            $event = Event::find($id);
+            // Find the resource
+            $resource = Resource::find($id);
 
-            if (!$event) {
-                FlashMessage::error('Event not found');
-                return $this->redirect('/admin/events');
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
             }
 
             $data = $request->getParsedBody();
             $action = $data['action'] ?? 'pending';
-            $isPublish = $action === 'launch';
+            $isPublish = $action === 'published';
 
-            // Validate event data
-            $errors = $this->validateEventData($request, $isPublish);
+            // Validate resource data
+            $errors = $this->validateResourceData($request, $id);
 
             if ($errors->any()) {
                 return $this->back($errors);
@@ -284,16 +297,53 @@ class AdminResourceController extends Controller
             // Get current user ID
             $userId = $this->getCurrentUserId($request);
             if (!$userId) {
-                FlashMessage::error('You must be logged in to update an event.');
-                return $this->redirect("/admin/events/edit/{$id}");
+                FlashMessage::error('You must be logged in to update a resource.');
+                return $this->redirect("/admin/resources/edit/{$id}");
+            }
+
+            // Handle file upload if new file is provided
+            $fileName = $resource->file_name;
+            $filePath = $resource->file_path;
+            $fileSize = $resource->file_size;
+            $fileExtension = $resource->file_extension;
+            $mimeType = $resource->mime_type;
+
+            if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                // Delete old file
+                if ($filePath) {
+                    try {
+                        $relativePath = $this->extractRelativeImagePath($filePath);
+                        if ($relativePath) {
+                            $this->uploader->delete($relativePath);
+                        }
+                    } catch (Exception $e) {
+                        error_log("Failed to delete old file: " . $e->getMessage());
+                    }
+                }
+
+                // Upload new file
+                $file = UploadedFile::createFromFilesArray($_FILES['file']);
+                $fileType = $data['file_type'] ?? 'other';
+                $this->configureUploaderForFileType($fileType);
+
+                try {
+                    $uploadResult = $this->uploader->upload($file, null, (string)$userId);
+                    $fileName = basename($uploadResult['path']);
+                    $filePath = $uploadResult['url'];
+                    $fileSize = $file->getSize();
+                    $fileExtension = $file->getClientExtension();
+                    $mimeType = $file->getMimeType();
+                } catch (Exception $e) {
+                    FlashMessage::error("File upload failed: " . $e->getMessage());
+                    return $this->redirect("/admin/resources/edit/{$id}");
+                }
             }
 
             // Handle featured image
-            $featuredImage = $event->event_image; // Keep existing image by default
+            $featuredImage = $resource->featured_image;
 
             // Check if user wants to remove the image
-            if (isset($data['remove_event_image']) && $data['remove_event_image'] == '1') {
-                // Delete old image if exists
+            if (isset($data['remove_featured_image']) && $data['remove_featured_image'] == '1') {
                 if ($featuredImage) {
                     try {
                         $relativePath = $this->extractRelativeImagePath($featuredImage);
@@ -301,14 +351,13 @@ class AdminResourceController extends Controller
                             $this->uploader->delete($relativePath);
                         }
                     } catch (Exception $e) {
-                        // Log but don't fail the update
-                        error_log("Failed to delete old image: " . $e->getMessage());
+                        error_log("Failed to delete featured image: " . $e->getMessage());
                     }
                 }
                 $featuredImage = null;
             }
             // Check if new image is uploaded
-            elseif (isset($_FILES['event_image']) && $_FILES['event_image']['error'] === UPLOAD_ERR_OK) {
+            elseif (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
                 // Delete old image if exists
                 if ($featuredImage) {
                     try {
@@ -317,483 +366,531 @@ class AdminResourceController extends Controller
                             $this->uploader->delete($relativePath);
                         }
                     } catch (Exception $e) {
-                        error_log("Failed to delete old image: " . $e->getMessage());
+                        error_log("Failed to delete old featured image: " . $e->getMessage());
                     }
                 }
 
                 // Upload new image
-                $file = UploadedFile::createFromFilesArray($_FILES['event_image']);
+                $file = UploadedFile::createFromFilesArray($_FILES['featured_image']);
+                $this->uploader->imagesOnly();
                 try {
-                    $uploadResult = $this->uploader->upload($file, null, (string)$userId);
+                    $uploadResult = $this->uploader->upload($file, null, (string)$userId . '_featured');
                     $featuredImage = $uploadResult['url'];
                 } catch (Exception $e) {
-                    FlashMessage::error("Upload failed: " . $e->getMessage());
-                    return $this->redirect("/admin/events/edit/{$id}");
+                    FlashMessage::error("Featured image upload failed: " . $e->getMessage());
                 }
             }
 
-            // Generate SEO fields if not provided
-            $seoTitle = !empty(trim($data['seo_title'] ?? ''))
-                ? trim($data['seo_title'])
-                : generateSeoTitle($data['title']);
-
-            $seoDescription = !empty(trim($data['seo_description'] ?? ''))
-                ? trim($data['seo_description'])
-                : generateSeoDescription($data['content'], $data['title']);
-
-            $seoKeywords = !empty(trim($data['seo_keywords'] ?? ''))
-                ? trim($data['seo_keywords'])
-                : generateSeoKeywords($data['content'], $data['title']);
+            // Determine if resource is free based on price
+            $price = (float)$data['price'];
+            $isFree = $price <= 0;
 
             // Determine published_at date
-            $publishedAt = $event->published_at;
+            $publishedAt = $resource->published_at;
             if ($publishedAt instanceof \DateTime) {
                 $publishedAt = $publishedAt->format('Y-m-d H:i:s');
             }
 
-            // If event is being published for the first time
-            if ($isPublish && $event->status !== 'published' && !$publishedAt) {
+            // If resource is being published for the first time
+            if ($isPublish && $resource->status !== 'published' && !$publishedAt) {
                 $publishedAt = date('Y-m-d H:i:s');
             }
 
             // Prepare update data
             $updateData = [
                 'title' => trim($data['title']),
-                'content' => $data['content'],
-                'event_date' => $data['event_date'],
-                'event_time' => $data['event_time'],
-                'location' => trim($data['location']),
-                'event_type' => $data['event_type'],
-                'event_image' => $featuredImage,
-                'status' => $isPublish ? 'launched' : 'pending',
-                'seo_title' => $seoTitle,
-                'seo_description' => $seoDescription,
-                'seo_keywords' => $seoKeywords,
+                'description' => trim($data['description'] ?? ''),
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'file_type' => $data['file_type'],
+                'file_extension' => $fileExtension,
+                'mime_type' => $mimeType,
+                'price' => $price,
+                'is_free' => $isFree,
+                'status' => $isPublish ? 'published' : $data['status'] ?? 'pending',
+                'featured_image' => $featuredImage,
                 'published_at' => $publishedAt,
             ];
 
-            // Update the event
-            $updated = $event->update($updateData);
+            // Update the resource
+            $updated = $resource->update($updateData);
 
             if ($updated) {
-                // Update tickets
-                if ($data['event_type'] === 'paid' && isset($data['tickets'])) {
-                    $this->updateEventTickets($event, $data['tickets']);
-                } else {
-                    // Remove all tickets if event type changed to free
-                    // $event->tickets()->delete();
-                    $tickets = $event->tickets;
-                    if ($tickets && $tickets->count() > 0) {
-                        foreach ($tickets as $ticket) {
-                            $ticket->delete();
-                        }
-                    }
-                }
-
-                // Update discount
-                $promoData = $data['promo'] ?? [];
-                $this->updateEventDiscount($event, $promoData);
-
-                // Update categories
-                if (!empty($data['categories'])) {
-                    $this->updateEventCategories($event, $data['categories']);
-                }
-
-                $textStatus = $isPublish ? "published" : "saved as draft";
-                FlashMessage::success("Event {$textStatus} successfully!");
+                $textStatus = $isPublish ? "published" : "updated";
+                FlashMessage::success("Resource {$textStatus} successfully!");
 
                 // Redirect based on action
-                if ($action === 'draft') {
-                    return $this->redirect("/admin/events/edit/{$event->id}");
+                if ($action === 'pending') {
+                    return $this->redirect("/admin/resources/edit/{$resource->id}");
                 }
 
-                return $this->redirect('/admin/events');
+                return $this->redirect('/admin/resources');
             } else {
-                FlashMessage::error('Failed to update event. Please try again.');
-                return $this->redirect("/admin/events/edit/{$id}");
+                FlashMessage::error('Failed to update resource. Please try again.');
+                return $this->redirect("/admin/resources/edit/{$id}");
             }
         } catch (Exception $e) {
-            FlashMessage::error('Error updating event: ' . $e->getMessage());
-            return $this->redirect("/admin/events/edit/{$id}");
-        }
-    }
-
-    public function show(Request $request)
-    {
-        try {
-            $id = $this->param($request, 'id');
-
-            $event = Event::with(['tickets', 'author', 'discount'])->find($id);
-
-            if (!$event) {
-                FlashMessage::error('Event not found');
-                return $this->redirect('/admin/events');
-            }
-
-            // Calculate ticket statistics
-            $totalTickets = 0;
-            $soldTickets = 0;
-            $availableTickets = 0;
-            $totalRevenue = 0;
-            $ticketSales = [];
-            $averageTicketPrice = 0;
-
-            if ($event->tickets && $event->tickets->count() > 0) {
-                foreach ($event->tickets as $ticket) {
-                    // In a real application, you would get these from your orders/attendees table
-                    $sold = rand(0, $ticket->quantity); // Mock data - replace with actual query
-                    $revenue = $sold * $ticket->price;
-
-                    $ticketSales[$ticket->id] = [
-                        'sold' => $sold,
-                        'revenue' => $revenue
-                    ];
-
-                    $totalTickets += $ticket->quantity;
-                    $soldTickets += $sold;
-                    $totalRevenue += $revenue;
-                }
-
-                $availableTickets = $totalTickets - $soldTickets;
-                $averageTicketPrice = $soldTickets > 0 ? $totalRevenue / $soldTickets : 0;
-            }
-
-            // Mock analytics data - replace with actual data from your database
-            $salesChartData = [
-                ['label' => 'Jan', 'value' => rand(10, 50)],
-                ['label' => 'Feb', 'value' => rand(20, 70)],
-                ['label' => 'Mar', 'value' => rand(30, 90)],
-                ['label' => 'Apr', 'value' => rand(15, 60)],
-                ['label' => 'May', 'value' => rand(25, 80)],
-                ['label' => 'Jun', 'value' => rand(40, 100)]
-            ];
-
-            $data = [
-                'page_title' => "{$event->title} Details",
-                'event' => $event,
-                'totalTickets' => $totalTickets,
-                'soldTickets' => $soldTickets,
-                'availableTickets' => $availableTickets,
-                'totalRevenue' => $totalRevenue,
-                'ticketSales' => $ticketSales,
-                'averageTicketPrice' => $averageTicketPrice,
-                'salesChartData' => $salesChartData,
-                'attendanceRate' => $totalTickets > 0 ? round(($soldTickets / $totalTickets) * 100) : 0,
-                'conversionRate' => rand(5, 25), // Mock data
-                'refundRate' => rand(1, 5), // Mock data
-                'daysToEvent' => $event->event_date,
-                'totalAttendees' => $soldTickets // Mock data - replace with actual attendee count
-            ];
-
-            return $this->view('admin.events.show', $data);
-        } catch (Exception $e) {
-            FlashMessage::error('Error loading event: ' . $e->getMessage());
-            return $this->redirect('/admin/events');
+            FlashMessage::error('Error updating resource: ' . $e->getMessage());
+            return $this->redirect("/admin/resources/edit/{$id}");
         }
     }
 
     /**
-     * Validate event data
+     * Display resource details
      */
-    private function validateEventData($request, bool $isLaunching = false): ErrorMessage
+    public function show(Request $request, $id): Response
+    {
+        try {
+            $resource = Resource::with(['user'])->find($id);
+
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
+            }
+
+            // Get download statistics
+            $downloadStats = ResourceDownload::where('resource_id', $id)
+                ->selectRaw('download_type, COUNT(*) as count, SUM(amount_paid) as total_revenue')
+                ->groupBy('download_type')
+                ->get();
+
+            $totalDownloads = ResourceDownload::where('resource_id', $id)->count();
+            $paidDownloads = ResourceDownload::where('resource_id', $id)
+                ->where('download_type', 'paid')
+                ->count();
+            $freeDownloads = ResourceDownload::where('resource_id', $id)
+                ->where('download_type', 'free')
+                ->count();
+            $totalRevenue = ResourceDownload::where('resource_id', $id)
+                ->where('download_type', 'paid')
+                ->sum('amount_paid');
+
+            // Get recent downloads
+            $recentDownloads = ResourceDownload::with(['user'])
+                ->where('resource_id', $id)
+                ->orderBy('downloaded_at', 'DESC')
+                ->limit(10)
+                ->get();
+
+            return $this->view('admin.resources.show', [
+                'resource' => $resource,
+                'downloadStats' => $downloadStats,
+                'totalDownloads' => $totalDownloads,
+                'paidDownloads' => $paidDownloads,
+                'freeDownloads' => $freeDownloads,
+                'totalRevenue' => $totalRevenue,
+                'recentDownloads' => $recentDownloads,
+                'page_title' => 'Resource Details',
+                'page_subtitle' => 'View resource information and statistics.'
+            ]);
+        } catch (Exception $e) {
+            FlashMessage::error('Error loading resource: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
+        }
+    }
+
+    /**
+     * Delete resource
+     */
+    public function destroy(Request $request, $id): Response
+    {
+        try {
+            $resource = Resource::find($id);
+
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
+            }
+
+            // Delete files
+            if ($resource->file_path) {
+                try {
+                    $relativePath = $this->extractRelativeImagePath($resource->file_path);
+                    if ($relativePath) {
+                        $this->uploader->delete($relativePath);
+                    }
+                } catch (Exception $e) {
+                    error_log("Failed to delete resource file: " . $e->getMessage());
+                }
+            }
+
+            if ($resource->featured_image) {
+                try {
+                    $relativePath = $this->extractRelativeImagePath($resource->featured_image);
+                    if ($relativePath) {
+                        $this->uploader->delete($relativePath);
+                    }
+                } catch (Exception $e) {
+                    error_log("Failed to delete featured image: " . $e->getMessage());
+                }
+            }
+
+            // Delete resource downloads
+            ResourceDownload::where('resource_id', $id)->delete();
+
+            // Delete the resource
+            $deleted = $resource->delete();
+
+            if ($deleted) {
+                FlashMessage::success('Resource deleted successfully!');
+            } else {
+                FlashMessage::error('Failed to delete resource.');
+            }
+
+            return $this->redirect('/admin/resources');
+        } catch (Exception $e) {
+            FlashMessage::error('Error deleting resource: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
+        }
+    }
+
+    /**
+     * Bulk actions
+     */
+    public function bulk(Request $request): Response
+    {
+        try {
+            $data = $request->getParsedBody();
+            $action = $data['action'] ?? null;
+            $ids = $data['ids'] ?? [];
+
+            if (empty($ids)) {
+                FlashMessage::error('No resources selected.');
+                return $this->redirect('/admin/resources');
+            }
+
+            $successCount = 0;
+            $errorCount = 0;
+
+            switch ($action) {
+                case 'publish':
+                    foreach ($ids as $id) {
+                        $resource = Resource::find($id);
+                        if ($resource) {
+                            $resource->update([
+                                'status' => 'published',
+                                'published_at' => date('Y-m-d H:i:s')
+                            ]);
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+                    FlashMessage::success("Published {$successCount} resource(s).");
+                    break;
+
+                case 'draft':
+                    foreach ($ids as $id) {
+                        $resource = Resource::find($id);
+                        if ($resource) {
+                            $resource->update(['status' => 'draft']);
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+                    FlashMessage::success("Moved {$successCount} resource(s) to draft.");
+                    break;
+
+                case 'delete':
+                    foreach ($ids as $id) {
+                        $resource = Resource::find($id);
+                        if ($resource) {
+                            // Delete files
+                            if ($resource->file_path) {
+                                try {
+                                    $relativePath = $this->extractRelativeImagePath($resource->file_path);
+                                    if ($relativePath) {
+                                        $this->uploader->delete($relativePath);
+                                    }
+                                } catch (Exception $e) {
+                                    error_log("Failed to delete resource file: " . $e->getMessage());
+                                }
+                            }
+
+                            if ($resource->featured_image) {
+                                try {
+                                    $relativePath = $this->extractRelativeImagePath($resource->featured_image);
+                                    if ($relativePath) {
+                                        $this->uploader->delete($relativePath);
+                                    }
+                                } catch (Exception $e) {
+                                    error_log("Failed to delete featured image: " . $e->getMessage());
+                                }
+                            }
+
+                            // Delete resource downloads
+                            ResourceDownload::where('resource_id', $id)->delete();
+
+                            // Delete resource
+                            if ($resource->delete()) {
+                                $successCount++;
+                            } else {
+                                $errorCount++;
+                            }
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+                    FlashMessage::success("Deleted {$successCount} resource(s).");
+                    break;
+
+                default:
+                    FlashMessage::error('Invalid action.');
+                    return $this->redirect('/admin/resources');
+            }
+
+            if ($errorCount > 0) {
+                FlashMessage::warning("{$errorCount} resource(s) could not be processed.");
+            }
+
+            return $this->redirect('/admin/resources');
+        } catch (Exception $e) {
+            FlashMessage::error('Error performing bulk action: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
+        }
+    }
+
+    /**
+     * Toggle resource status
+     */
+    public function toggleStatus(Request $request, $id): Response
+    {
+        try {
+            $resource = Resource::find($id);
+
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
+            }
+
+            $newStatus = $resource->status === 'published' ? 'draft' : 'published';
+            $publishedAt = $newStatus === 'published' ? date('Y-m-d H:i:s') : null;
+
+            $resource->update([
+                'status' => $newStatus,
+                'published_at' => $publishedAt
+            ]);
+
+            FlashMessage::success("Resource status updated to {$newStatus}.");
+            return $this->redirect('/admin/resources');
+        } catch (Exception $e) {
+            FlashMessage::error('Error toggling resource status: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
+        }
+    }
+
+    /**
+     * Download resource (admin version)
+     */
+    public function download(Request $request, $id): Response
+    {
+        try {
+            $resource = Resource::find($id);
+
+            if (!$resource) {
+                FlashMessage::error('Resource not found');
+                return $this->redirect('/admin/resources');
+            }
+
+            // Increment download count
+            $resource->increment('download_count');
+
+            // Get file path
+            $filePath = $resource->file_path;
+            $fullPath = $this->uploader->getFullPath($this->extractRelativeImagePath($filePath));
+
+            if (!file_exists($fullPath)) {
+                FlashMessage::error('File not found on server.');
+                return $this->redirect("/admin/resources/show/{$id}");
+            }
+
+            // Get file info
+            $fileName = $resource->file_name ?: 'resource_' . $id . '.' . $resource->file_extension;
+            $fileSize = filesize($fullPath);
+            $mimeType = mime_content_type($fullPath);
+
+            // Set headers for download
+            header('Content-Description: File Transfer');
+            header('Content-Type: ' . $mimeType);
+            header('Content-Disposition: attachment; filename="' . basename($fileName) . '"');
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+            header('Content-Length: ' . $fileSize);
+
+            // Clear output buffer
+            if (ob_get_length()) ob_clean();
+            flush();
+
+            // Read file
+            readfile($fullPath);
+            exit;
+        } catch (Exception $e) {
+            FlashMessage::error('Error downloading resource: ' . $e->getMessage());
+            return $this->redirect("/admin/resources/show/{$id}");
+        }
+    }
+
+    /**
+     * Export resources to CSV
+     */
+    public function export(Request $request): Response
+    {
+        try {
+            $query = Resource::with(['user'])->orderBy('created_at', 'DESC');
+
+            // Apply filters if any
+            $params = $request->getQueryParams();
+            if (!empty($params['status'])) {
+                $query->where('status', $params['status']);
+            }
+            if (!empty($params['file_type'])) {
+                $query->where('file_type', $params['file_type']);
+            }
+
+            $resources = $query->get();
+
+            // Set headers for CSV download
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=resources_' . date('Y-m-d') . '.csv');
+
+            $output = fopen('php://output', 'w');
+
+            // Write CSV header
+            fputcsv($output, [
+                'ID',
+                'Title',
+                'Description',
+                'File Type',
+                'File Size',
+                'Price',
+                'Status',
+                'Downloads',
+                'Paid Downloads',
+                'Revenue',
+                'Created By',
+                'Created At',
+                'Published At'
+            ]);
+
+            // Write data rows
+            foreach ($resources as $resource) {
+                fputcsv($output, [
+                    $resource->id,
+                    $resource->title,
+                    $resource->description,
+                    $resource->file_type,
+                    $this->formatBytes($resource->file_size),
+                    number_format($resource->price, 2),
+                    $resource->status,
+                    $resource->download_count,
+                    $resource->paid_download_count,
+                    number_format($resource->revenue_generated, 2),
+                    $resource->user->name ?? 'Unknown',
+                    $resource->created_at,
+                    $resource->published_at
+                ]);
+            }
+
+            fclose($output);
+            exit;
+        } catch (Exception $e) {
+            FlashMessage::error('Error exporting resources: ' . $e->getMessage());
+            return $this->redirect('/admin/resources');
+        }
+    }
+
+    /**
+     * Configure uploader based on file type
+     */
+    private function configureUploaderForFileType(string $fileType): void
+    {
+        switch ($fileType) {
+            case 'image':
+                $this->uploader->imagesOnly(10 * 1024 * 1024); // 10MB max for images
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+                $this->uploader->setAllowedExtensions($allowedExtensions);
+                break;
+
+            case 'video':
+                $this->uploader->videosOnly(100 * 1024 * 1024); // 100MB max for videos
+                $allowedExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'];
+                $this->uploader->setAllowedExtensions($allowedExtensions);
+                break;
+
+            case 'audio':
+                $this->uploader->audiosOnly(50 * 1024 * 1024); // 50MB max for audio
+                $allowedExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'flac'];
+                $this->uploader->setAllowedExtensions($allowedExtensions);
+                break;
+
+            case 'document':
+                $this->uploader->documentsOnly(20 * 1024 * 1024); // 20MB max for documents
+                $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'];
+                $this->uploader->setAllowedExtensions($allowedExtensions);
+                break;
+
+            default: // 'other'
+                $this->uploader->setMaxFileSize(50 * 1024 * 1024); // 50MB max
+                $this->uploader->setAllowedExtensions([]); // Allow all extensions for 'other'
+                break;
+        }
+    }
+
+    /**
+     * Validate resource data
+     */
+    private function validateResourceData($request, $resourceId = null): ErrorMessage
     {
         $data = $request->getParsedBody();
         $errors = new ErrorMessage();
 
         // Title validation
         if (empty($data['title'])) {
-            $errors->add('title', 'Event title is required');
+            $errors->add('title', 'Resource title is required');
         } elseif (strlen($data['title']) > 255) {
-            $errors->add('title', 'Event title must not exceed 255 characters');
+            $errors->add('title', 'Resource title must not exceed 255 characters');
         }
 
-        // Event date validation
-        if (empty($data['event_date'])) {
-            $errors->add('event_date', 'Event date is required');
-        } else {
-            $eventDate = \DateTime::createFromFormat('Y-m-d', $data['event_date']);
-            if (!$eventDate || $eventDate->format('Y-m-d') !== $data['event_date']) {
-                $errors->add('event_date', 'Invalid event date format');
-            }
+        // Description validation
+        if (empty($data['description'])) {
+            $errors->add('description', 'Resource description is required');
+        } elseif (strlen(strip_tags($data['description'])) < 10) {
+            $errors->add('description', 'Resource description must be at least 10 characters');
         }
 
-        // Event time validation
-        if (empty($data['event_time'])) {
-            $errors->add('event_time', 'Event time is required');
+        // File type validation
+        if (!in_array($data['file_type'] ?? '', ['image', 'video', 'audio', 'document', 'other'])) {
+            $errors->add('file_type', 'Resource file type must be a valid file type.');
         }
 
-        // Location validation
-        if (empty($data['location'])) {
-            $errors->add('location', 'Event location is required');
+        // Price validation
+        if (!isset($data['price']) || $data['price'] === '') {
+            $errors->add('price', 'Resource price is required');
+        } elseif (!is_numeric($data['price']) || $data['price'] < 0) {
+            $errors->add('price', 'Resource price must be a valid non-negative number');
         }
 
-        // Content validation (stricter for launching)
-        if ($isLaunching) {
-            if (empty($data['content'])) {
-                $errors->add('content', 'Event description is required');
-            } elseif (strlen(strip_tags($data['content'])) < 50) {
-                $errors->add('content', 'Event description must be at least 50 characters');
-            }
+        // Status validation
+        if (!in_array($data['status'] ?? '', ['published', 'pending', 'draft'])) {
+            $errors->add('status', 'Resource status must be valid.');
         }
 
-        // Tickets validation for paid events when publishing
-        if ($isLaunching && $data['event_type'] === 'paid') {
-            if (empty($data['tickets']) || !is_array($data['tickets'])) {
-                $errors->add('tickets', 'At least one ticket type is required for paid events');
-            } else {
-                $hasValidTicket = false;
-                foreach ($data['tickets'] as $ticketId => $ticket) {
-                    if (empty(trim($ticket['name'] ?? ''))) {
-                        $errors->add("tickets.{$ticketId}.name", 'Ticket name is required');
-                    }
-                    if (!isset($ticket['price']) || $ticket['price'] === '') {
-                        $errors->add("tickets.{$ticketId}.price", 'Ticket price is required');
-                    } elseif ($ticket['price'] < 0) {
-                        $errors->add("tickets.{$ticketId}.price", 'Ticket price cannot be negative');
-                    }
-                    if (!isset($ticket['quantity']) || $ticket['quantity'] === '') {
-                        $errors->add("tickets.{$ticketId}.quantity", 'Ticket quantity is required');
-                    } elseif ($ticket['quantity'] < 1) {
-                        $errors->add("tickets.{$ticketId}.quantity", 'Ticket quantity must be at least 1');
-                    }
-
-                    // If we have at least one valid ticket, mark as having valid tickets
-                    if (!empty(trim($ticket['name'] ?? '')) && isset($ticket['price']) && $ticket['price'] >= 0 && isset($ticket['quantity']) && $ticket['quantity'] >= 1) {
-                        $hasValidTicket = true;
-                    }
-                }
-
-                if (!$hasValidTicket) {
-                    $errors->add('tickets', 'At least one valid ticket type is required for paid events');
-                }
-            }
-        }
-
-        // Discount validation if enabled - UPDATED FOR PROMO ARRAY
-        $promoData = $data['promo'] ?? [];
-        if (isset($promoData['enabled']) && $promoData['enabled'] === '1') {
-            if (empty(trim($promoData['code'] ?? ''))) {
-                $errors->add('promo.code', 'Promo code is required when discount is enabled');
-            }
-            if (empty($promoData['discount_value'] ?? '')) {
-                $errors->add('promo.discount_value', 'Discount value is required when discount is enabled');
-            } elseif ($promoData['discount_value'] < 0) {
-                $errors->add('promo.discount_value', 'Discount value cannot be negative');
-            }
-            if (($promoData['discount_type'] ?? '') === 'percentage' && $promoData['discount_value'] > 100) {
-                $errors->add('promo.discount_value', 'Percentage discount cannot exceed 100%');
+        // File validation (only for new resources or when file is being uploaded)
+        if (!$resourceId && (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK)) {
+            $errors->add('file', 'Please select a file to upload');
+        } elseif (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+            if ($_FILES['file']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['file']['error'] === UPLOAD_ERR_FORM_SIZE) {
+                $errors->add('file', 'File is too large. Please upload a smaller file.');
+            } elseif ($_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                $errors->add('file', 'File upload error: ' . $_FILES['file']['error']);
             }
         }
 
         return $errors;
-    }
-
-    /**
-     * Create event tickets
-     */
-    private function createEventTickets(Event $event, array $tickets): bool
-    {
-        try {
-            foreach ($tickets as $ticketData) {
-                EventTicket::create([
-                    'event_id' => $event->id,
-                    'name' => trim($ticketData['name']),
-                    'price' => (float)$ticketData['price'],
-                    'quantity' => (int)$ticketData['quantity'],
-                    'description' => $ticketData['description'] ?? null,
-                    'sale_start' => !empty($ticketData['sale_start']) ? $ticketData['sale_start'] : null,
-                    'sale_end' => !empty($ticketData['sale_end']) ? $ticketData['sale_end'] : null,
-                ]);
-            }
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to create event tickets: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Update event tickets - ALTERNATIVE APPROACH
-     * Uses individual deletes instead of whereIn
-     */
-    private function updateEventTickets(Event $event, array $tickets): bool
-    {
-        try {
-            // Get all existing ticket IDs from database
-            $existingTickets = $event->tickets;
-            $existingTicketIds = $existingTickets->pluck('id')->toArray();
-            $updatedTicketIds = [];
-
-            // Process each ticket from the form
-            foreach ($tickets as $ticketId => $ticketData) {
-                // Skip empty ticket data
-                if (empty($ticketData['name']) && empty($ticketData['price']) && empty($ticketData['quantity'])) {
-                    continue;
-                }
-
-                // Check if this is an existing ticket
-                if (is_numeric($ticketId) && in_array((int)$ticketId, $existingTicketIds)) {
-                    // Update existing ticket
-                    $ticket = EventTicket::find($ticketId);
-                    if ($ticket && $ticket->event_id === $event->id) {
-                        $ticket->update([
-                            'name' => trim($ticketData['name']),
-                            'price' => (float)$ticketData['price'],
-                            'quantity' => (int)$ticketData['quantity'],
-                            'description' => $ticketData['description'] ?? null,
-                            'sale_start' => !empty($ticketData['sale_start']) ? $ticketData['sale_start'] : null,
-                            'sale_end' => !empty($ticketData['sale_end']) ? $ticketData['sale_end'] : null,
-                        ]);
-                        $updatedTicketIds[] = (int)$ticketId;
-                    }
-                } else {
-                    // Create new ticket
-                    $newTicket = EventTicket::create([
-                        'event_id' => $event->id,
-                        'name' => trim($ticketData['name']),
-                        'price' => (float)$ticketData['price'],
-                        'quantity' => (int)$ticketData['quantity'],
-                        'description' => $ticketData['description'] ?? null,
-                        'sale_start' => !empty($ticketData['sale_start']) ? $ticketData['sale_start'] : null,
-                        'sale_end' => !empty($ticketData['sale_end']) ? $ticketData['sale_end'] : null,
-                    ]);
-                    $updatedTicketIds[] = $newTicket->id;
-                }
-            }
-
-            // Delete tickets that were removed from the form
-            // Use individual deletes instead of whereIn for more reliability
-            $ticketsToDelete = array_diff($existingTicketIds, $updatedTicketIds);
-
-            if (!empty($ticketsToDelete)) {
-                foreach ($ticketsToDelete as $ticketIdToDelete) {
-                    $ticketToDelete = EventTicket::find($ticketIdToDelete);
-                    if ($ticketToDelete && $ticketToDelete->event_id === $event->id) {
-                        $ticketToDelete->delete();
-                        error_log("Deleted ticket ID: {$ticketIdToDelete}");
-                    }
-                }
-            }
-
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to update event tickets: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Create event discount - UPDATED FOR PROMO ARRAY
-     */
-    private function createEventDiscount(Event $event, array $promoData): bool
-    {
-        try {
-            EventDiscount::create([
-                'event_id' => $event->id,
-                'promo_code' => strtoupper(trim($promoData['code'])),
-                'discount_type' => $promoData['discount_type'],
-                'discount_value' => (float)$promoData['discount_value'],
-                'promo_valid_until' => !empty($promoData['valid_until']) ? $promoData['valid_until'] : null,
-                'promo_usage_limit' => !empty($promoData['usage_limit']) ? (int)$promoData['usage_limit'] : null,
-                'used_count' => 0,
-            ]);
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to create event discount: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Update event discount - UPDATED FOR PROMO ARRAY
-     */
-    private function updateEventDiscount(Event $event, array $promoData): bool
-    {
-        try {
-            if (isset($promoData['enabled']) && $promoData['enabled'] === '1') {
-                $discount = $event->discount;
-                if ($discount) {
-                    // Update existing discount
-                    $discount->update([
-                        'promo_code' => strtoupper(trim($promoData['code'])),
-                        'discount_type' => $promoData['discount_type'],
-                        'discount_value' => (float)$promoData['discount_value'],
-                        'promo_valid_until' => !empty($promoData['valid_until']) ? $promoData['valid_until'] : null,
-                        'promo_usage_limit' => !empty($promoData['usage_limit']) ? (int)$promoData['usage_limit'] : null,
-                    ]);
-                } else {
-                    // Create new discount
-                    $this->createEventDiscount($event, $promoData);
-                }
-            } else {
-                // Remove discount if disabled
-                $discount = $event->discount;
-                if ($discount) {
-                    $discount->delete();
-                }
-            }
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to update event discount: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Create event categories
-     */
-    private function createEventCategories(Event $event, $category): bool
-    {
-        try {
-            // Check if the relationship already exists to prevent duplicates
-            $exists = EventCategories::where('event_id', $event->id)
-                ->where('type_id', $category)
-                ->exists();
-
-            if ($exists) {
-                // Relationship already exists, no need to create
-                return true;
-            }
-
-            EventCategories::create([
-                'event_id' => $event->id,
-                'type_id' => $category
-            ]);
-
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to create event categories: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Update event categories
-     */
-    private function updateEventCategories(Event $event, $categoryId): bool
-    {
-        try {
-            // First, check if the category relationship already exists
-            $existingCategory = EventCategories::where('event_id', $event->id)->first();
-
-            if ($existingCategory) {
-                // Update the existing category
-                $existingCategory->update([
-                    'type_id' => $categoryId
-                ]);
-            } else {
-                // Create new category relationship
-                EventCategories::create([
-                    'event_id' => $event->id,
-                    'type_id' => $categoryId
-                ]);
-            }
-
-            return true;
-        } catch (Exception $e) {
-            error_log("Failed to update event categories: " . $e->getMessage());
-            return false;
-        }
     }
 
     /**
@@ -841,5 +938,19 @@ class AdminResourceController extends Controller
         $userId = $_SESSION['user_id'] ?? $_SESSION['auth_user_id'] ?? $_SESSION['admin_id'] ?? null;
 
         return $userId ? (int) $userId : null;
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
