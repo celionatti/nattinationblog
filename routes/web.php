@@ -155,13 +155,19 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
 
     Route::post('/resources/create', [AdminResourceController::class, 'store'])->name('admin.resources.store');
 
-    Route::get('/resources/detail/{id}/{slug}', [AdminResourceController::class, 'show'])->name('admin.resources.show');
+    Route::get('/resources/detail/{id}', [AdminResourceController::class, 'show'])->name('admin.resources.show');
 
     Route::get('/resources/edit/{id}', [AdminResourceController::class, 'edit'])->name('admin.resources.edit');
 
     Route::put('/resources/edit/{id}', [AdminResourceController::class, 'update'])->name('admin.resources.update');
 
     Route::delete('/resources/delete/{id}', [AdminResourceController::class, 'destroy'])->name('admin.resources.destroy');
+
+    Route::get('/resources/download', [AdminResourceController::class, 'download'])->name('admin.resources.download');
+
+    Route::get('/resources/export', [AdminResourceController::class, 'manage'])->name('admin.resources.export');
+
+    Route::get('/resources/toggle-status', [AdminResourceController::class, 'manage'])->name('admin.resources.toggle-status');
 
     /*
     * -------------------------------------------------------------------------------

@@ -91,6 +91,10 @@
                 @endforeach
             </tbody>
         </table>
+
+        <?php if (isset($paginator) && $paginator && $paginator->hasPages()): ?>
+            {{{ $paginator->render() }}}
+        <?php endif; ?>
     </div>
 </div>
 @endsection

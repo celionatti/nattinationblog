@@ -32,7 +32,7 @@ class AdminResourceController extends Controller
     {
         $this->uploader = new FileUploader();
         $this->uploader->usePublicFolder("uploads/resources");
-        $this->uploader->imagesOnly(5 * 1024 * 1024);
+        // $this->uploader->imagesOnly(10 * 1024 * 1024);
         $this->uploader->disableSecurityFiles();
     }
 
@@ -92,7 +92,10 @@ class AdminResourceController extends Controller
             return $this->view('admin.resources.manage', [
                 'resources' => [],
                 'paginator' => null,
-                'page_title' => 'Resources Management'
+                'status' => null,
+                'file_type' => null,
+                'page_title' => 'Resources Management',
+                'page_subtitle' => 'Upload and manage media, files, and documents for your users.',
             ]);
         }
     }
@@ -223,9 +226,6 @@ class AdminResourceController extends Controller
                 $textStatus = $isPublish ? "published" : "saved as draft";
                 FlashMessage::success("Resource {$textStatus} successfully!");
 
-                // Log resource creation
-                error_log("Resource created: ID={$resource->id}, Title={$resource->title}, Type={$resource->file_type}");
-
                 // Redirect based on action
                 if ($action === 'pending') {
                     return $this->redirect("/admin/resources/edit/{$resource->id}");
@@ -238,7 +238,6 @@ class AdminResourceController extends Controller
             return $this->redirect('/admin/resources/create');
         } catch (Exception $e) {
             FlashMessage::error('Error creating resource: ' . $e->getMessage());
-            error_log("Resource creation error: " . $e->getMessage());
             return $this->redirect('/admin/resources/create');
         }
     }
@@ -546,113 +545,6 @@ class AdminResourceController extends Controller
     }
 
     /**
-     * Bulk actions
-     */
-    public function bulk(Request $request): Response
-    {
-        try {
-            $data = $request->getParsedBody();
-            $action = $data['action'] ?? null;
-            $ids = $data['ids'] ?? [];
-
-            if (empty($ids)) {
-                FlashMessage::error('No resources selected.');
-                return $this->redirect('/admin/resources');
-            }
-
-            $successCount = 0;
-            $errorCount = 0;
-
-            switch ($action) {
-                case 'publish':
-                    foreach ($ids as $id) {
-                        $resource = Resource::find($id);
-                        if ($resource) {
-                            $resource->update([
-                                'status' => 'published',
-                                'published_at' => date('Y-m-d H:i:s')
-                            ]);
-                            $successCount++;
-                        } else {
-                            $errorCount++;
-                        }
-                    }
-                    FlashMessage::success("Published {$successCount} resource(s).");
-                    break;
-
-                case 'draft':
-                    foreach ($ids as $id) {
-                        $resource = Resource::find($id);
-                        if ($resource) {
-                            $resource->update(['status' => 'draft']);
-                            $successCount++;
-                        } else {
-                            $errorCount++;
-                        }
-                    }
-                    FlashMessage::success("Moved {$successCount} resource(s) to draft.");
-                    break;
-
-                case 'delete':
-                    foreach ($ids as $id) {
-                        $resource = Resource::find($id);
-                        if ($resource) {
-                            // Delete files
-                            if ($resource->file_path) {
-                                try {
-                                    $relativePath = $this->extractRelativeImagePath($resource->file_path);
-                                    if ($relativePath) {
-                                        $this->uploader->delete($relativePath);
-                                    }
-                                } catch (Exception $e) {
-                                    error_log("Failed to delete resource file: " . $e->getMessage());
-                                }
-                            }
-
-                            if ($resource->featured_image) {
-                                try {
-                                    $relativePath = $this->extractRelativeImagePath($resource->featured_image);
-                                    if ($relativePath) {
-                                        $this->uploader->delete($relativePath);
-                                    }
-                                } catch (Exception $e) {
-                                    error_log("Failed to delete featured image: " . $e->getMessage());
-                                }
-                            }
-
-                            // Delete resource downloads
-                            ResourceDownload::where('resource_id', $id)->delete();
-
-                            // Delete resource
-                            if ($resource->delete()) {
-                                $successCount++;
-                            } else {
-                                $errorCount++;
-                            }
-                        } else {
-                            $errorCount++;
-                        }
-                    }
-                    FlashMessage::success("Deleted {$successCount} resource(s).");
-                    break;
-
-                default:
-                    FlashMessage::error('Invalid action.');
-                    return $this->redirect('/admin/resources');
-            }
-
-            if ($errorCount > 0) {
-                FlashMessage::warning("{$errorCount} resource(s) could not be processed.");
-            }
-
-            return $this->redirect('/admin/resources');
-        } catch (Exception $e) {
-            FlashMessage::error('Error performing bulk action: ' . $e->getMessage());
-            return $this->redirect('/admin/resources');
-        }
-    }
-
-    /**
      * Toggle resource status
      */
     public function toggleStatus(Request $request, $id): Response
@@ -834,7 +726,7 @@ class AdminResourceController extends Controller
                 break;
 
             default: // 'other'
-                $this->uploader->setMaxFileSize(50 * 1024 * 1024); // 50MB max
+                // $this->uploader->setMaxFileSize(50 * 1024 * 1024); // 50MB max
                 $this->uploader->setAllowedExtensions([]); // Allow all extensions for 'other'
                 break;
         }

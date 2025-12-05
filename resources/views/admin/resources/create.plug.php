@@ -124,45 +124,47 @@
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
-    function setAction(action) {
-        document.getElementById('formAction').value = action;
-        document.getElementById('resourceForm').submit();
-    }
-
-    // Update icon preview based on file type
-    document.getElementById('resourceType').addEventListener('change', function() {
-        const iconPreview = document.getElementById('iconPreview');
-        const type = this.value;
-
-        const icons = {
-            'image': 'bi-image',
-            'video': 'bi-camera-video',
-            'audio': 'bi-music-note-beamed',
-            'document': 'bi-file-earmark-text',
-            'other': 'bi-file-earmark'
-        };
-
-        iconPreview.className = 'bi ' + (icons[type] || 'bi-file-earmark');
-    });
-
-    // File size validation
-    document.getElementById('resourceFile').addEventListener('change', function() {
-        const file = this.files[0];
-        const fileType = document.getElementById('resourceType').value;
-        const maxSizes = {
-            'image': 10 * 1024 * 1024, // 10MB
-            'video': 100 * 1024 * 1024, // 100MB
-            'audio': 50 * 1024 * 1024, // 50MB
-            'document': 20 * 1024 * 1024, // 20MB
-            'other': 50 * 1024 * 1024 // 50MB
-        };
-
-        if (file && file.size > maxSizes[fileType]) {
-            alert(`File is too large. Maximum size for ${fileType} files is ${maxSizes[fileType] / (1024*1024)}MB.`);
-            this.value = '';
+    document.addEventListener('DOMContentLoaded', function() {
+        function setAction(action) {
+            document.getElementById('formAction').value = action;
+            document.getElementById('resourceForm').submit();
         }
+
+        // Update icon preview based on file type
+        document.getElementById('resourceType').addEventListener('change', function() {
+            const iconPreview = document.getElementById('iconPreview');
+            const type = this.value;
+
+            const icons = {
+                'image': 'bi-image',
+                'video': 'bi-camera-video',
+                'audio': 'bi-music-note-beamed',
+                'document': 'bi-file-earmark-text',
+                'other': 'bi-file-earmark'
+            };
+
+            iconPreview.className = 'bi ' + (icons[type] || 'bi-file-earmark');
+        });
+
+        // File size validation
+        document.getElementById('resourceFile').addEventListener('change', function() {
+            const file = this.files[0];
+            const fileType = document.getElementById('resourceType').value;
+            const maxSizes = {
+                'image': 10 * 1024 * 1024, // 10MB
+                'video': 100 * 1024 * 1024, // 100MB
+                'audio': 50 * 1024 * 1024, // 50MB
+                'document': 20 * 1024 * 1024, // 20MB
+                'other': 50 * 1024 * 1024 // 50MB
+            };
+
+            if (file && file.size > maxSizes[fileType]) {
+                alert(`File is too large. Maximum size for ${fileType} files is ${maxSizes[fileType] / (1024*1024)}MB.`);
+                this.value = '';
+            }
+        });
     });
 </script>
-@endsection
+@endpush
