@@ -39,6 +39,7 @@ class ResourceDownload extends PlugModel
     protected $casts = [
         'resource_id' => 'int',
         'user_id' => 'int',
+        'amount_paid' => 'float',
         'downloaded_at' => 'datetime',
     ];
 

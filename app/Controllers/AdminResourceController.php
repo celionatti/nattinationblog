@@ -448,22 +448,25 @@ class AdminResourceController extends Controller
                 return $this->redirect('/admin/resources');
             }
 
-            // Get download statistics
-            $downloadStats = ResourceDownload::where('resource_id', $id)
-                ->selectRaw('download_type, COUNT(*) as count, SUM(amount_paid) as total_revenue')
-                ->groupBy('download_type')
-                ->get();
+            // Add formatted file size to the resource
+            $resource->formatted_file_size = $this->formatBytes($resource->file_size);
 
-            $totalDownloads = ResourceDownload::where('resource_id', $id)->count();
-            $paidDownloads = ResourceDownload::where('resource_id', $id)
-                ->where('download_type', 'paid')
-                ->count();
-            $freeDownloads = ResourceDownload::where('resource_id', $id)
-                ->where('download_type', 'free')
-                ->count();
-            $totalRevenue = ResourceDownload::where('resource_id', $id)
-                ->where('download_type', 'paid')
-                ->sum('amount_paid');
+            // Get download statistics using raw SQL query
+            $downloadStats = ResourceDownload::raw(
+                "SELECT 
+                download_type,
+                COUNT(*) as count,
+                SUM(amount_paid) as total_revenue
+             FROM resource_downloads 
+             WHERE resource_id = ?
+             GROUP BY download_type",
+                [$id]
+            );
+
+            $totalDownloads = $resource->download_count;
+            $paidDownloads = $resource->paid_download_count;
+            $freeDownloads = $totalDownloads - $paidDownloads;
+            $totalRevenue = $resource->revenue_generated;
 
             // Get recent downloads
             $recentDownloads = ResourceDownload::with(['user'])
@@ -480,7 +483,7 @@ class AdminResourceController extends Controller
                 'freeDownloads' => $freeDownloads,
                 'totalRevenue' => $totalRevenue,
                 'recentDownloads' => $recentDownloads,
-                'page_title' => 'Resource Details',
+                'page_title' => 'Resource Details - ' . $resource->title,
                 'page_subtitle' => 'View resource information and statistics.'
             ]);
         } catch (Exception $e) {

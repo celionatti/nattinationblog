@@ -75,6 +75,20 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label for="featured_image" class="form-label">Featured Image (Optional)</label>
+                <input type="file" class="form-control" id="featured_image" name="featured_image"
+                    accept="image/*">
+
+                <div class="form-text">
+                    Upload a featured image for this resource (optional).
+                    This image will be used as a thumbnail or preview for the resource on your site.
+                </div>
+                @error('featured_image')
+                <div class="text-danger">{{ $message }}</div>
+                @enderror
+            </div>
+
             <div class="row gap-2">
                 <div class="col form-group">
                     <label for="resourcePrice" class="form-label">Resource Price *</label>
