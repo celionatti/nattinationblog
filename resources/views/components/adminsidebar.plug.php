@@ -79,7 +79,7 @@
     <div class="sidebar-section-title">Services</div>
     <ul class="sidebar-nav">
         <li class="sidebar-nav-item" id="escrow">
-            <a href="{{ url('admin/services/escrow') }}" class="sidebar-nav-link {{ activeClass('/admin/services/escrow') }}">
+            <a href="{{ url('admin/escrow') }}" class="sidebar-nav-link {{ activeClass('/admin/escrow') }}">
                 <i class="bi bi-bank"></i>
                 Escrow
             </a>

@@ -20,6 +20,7 @@ use App\Controllers\HomeController;
 use App\Controllers\AdminController;
 use App\Controllers\ArticleController;
 use App\Controllers\AdminEventController;
+use App\Controllers\AdminEscrowController;
 use App\Controllers\AdminArticleController;
 use App\Controllers\AdminSettingController;
 use App\Controllers\AdminCategoryController;
@@ -168,6 +169,14 @@ Route::group(['prefix' => '/admin', 'middleware' => ['admin']], function () {
     Route::get('/resources/export', [AdminResourceController::class, 'manage'])->name('admin.resources.export');
 
     Route::get('/resources/toggle-status', [AdminResourceController::class, 'manage'])->name('admin.resources.toggle-status');
+
+    /*
+    * -------------------------------------------------------------------------------
+    * Admin Escrow
+    * -------------------------------------------------------------------------------
+    */
+    Route::get('/escrow', [AdminEscrowController::class, 'manage'])->name('admin.escrow.index');
+
 
     /*
     * -------------------------------------------------------------------------------
