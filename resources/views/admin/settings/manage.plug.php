@@ -754,7 +754,7 @@
 @push('scripts')
 <script src="{{ asset('assets/js/class/settings.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
 
         const settingsManager = new SettingsManager();
         // ========== SETTINGS TABS ==========
@@ -762,7 +762,7 @@
         const tabContents = document.querySelectorAll('.tab-content');
 
         settingsNavLinks.forEach(link => {
-            link.addEventListener('click', function (e) {
+            link.addEventListener('click', function(e) {
                 e.preventDefault();
 
                 // Remove active class from all links and tabs
@@ -794,23 +794,25 @@
         const homepagePage = document.getElementById('homepagePage');
         const postsPage = document.getElementById('postsPage');
 
-        homepageLatest.addEventListener('change', function () {
-            if (this.checked) {
-                homepagePage.disabled = true;
-                postsPage.disabled = true;
-            }
-        });
+        if (homepageLatest && homepageStatic) {
+            homepageLatest.addEventListener('change', function() {
+                if (this.checked) {
+                    homepagePage.disabled = true;
+                    postsPage.disabled = true;
+                }
+            });
 
-        homepageStatic.addEventListener('change', function () {
-            if (this.checked) {
-                homepagePage.disabled = false;
-                postsPage.disabled = false;
-            }
-        });
+            homepageStatic.addEventListener('change', function() {
+                if (this.checked) {
+                    homepagePage.disabled = false;
+                    postsPage.disabled = false;
+                }
+            });
+        }
 
         // ========== FORM SUBMISSION ==========
         document.querySelectorAll('.btn-primary').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function() {
                 const card = this.closest('.settings-card');
                 const title = card.querySelector('.settings-card-title').textContent;
 
@@ -820,12 +822,15 @@
         });
 
         // ========== DANGER ZONE ACTIONS ==========
-        document.querySelector('.btn-danger').addEventListener('click', function () {
-            if (confirm('Are you absolutely sure you want to delete this site? This action cannot be undone and all your data will be permanently lost.')) {
-                alert('Site deletion process initiated. You will receive a confirmation email.');
-                console.log('Site deletion requested');
-            }
-        });
+        const dangerButton = document.querySelector('.btn-danger');
+        if (dangerButton) {
+            dangerButton.addEventListener('click', function() {
+                if (confirm('Are you absolutely sure you want to delete this site? This action cannot be undone and all your data will be permanently lost.')) {
+                    alert('Site deletion process initiated. You will receive a confirmation email.');
+                    console.log('Site deletion requested');
+                }
+            });
+        }
     });
 </script>
 @endpush

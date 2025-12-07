@@ -26,6 +26,9 @@ class Setting extends PlugModel
     protected $table = 'settings';
     protected $primaryKey = 'id';
     protected $fillable = ['setting_key', 'setting_value', 'setting_type', 'setting_group'];
+
+    protected $guarded = [];
+    
     // protected $casts = [
     //     'setting_value' => 'array',
     // ];
